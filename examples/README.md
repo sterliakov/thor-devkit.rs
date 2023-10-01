@@ -35,7 +35,7 @@ In particular, here's a sample usage of running `examples/my_example.rs`:
 ❯❯ rx my_example
 ```
 
-If you run the command without any arguments, you can select 
+If you run the command without any arguments, you can select
 from the list of available examples:
 
 ```shell

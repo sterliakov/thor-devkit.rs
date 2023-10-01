@@ -1,8 +1,9 @@
-#![doc(html_root_url = "https://docs.rs/thor-devkit.rs/0.0.1")]
+#![doc(html_root_url = "https://docs.rs/thor-devkit/0.0.1")]
 #![warn(rust_2018_idioms, missing_docs)]
-#![deny(warnings, dead_code, unused_imports, unused_mut)]
+// #![deny(warnings, dead_code, unused_imports, unused_mut)]
+#![deny(dead_code, unused_imports, unused_mut)]
 
-//! [![github]](https://github.com/sterliakov/thor-devkit.rs)&ensp;[![crates-io]](https://crates.io/crates/thor-devkit.rs)&ensp;[![docs-rs]](https://docs.rs/thor-devkit.rs)
+//! [![github]](https://github.com/sterliakov/thor-devkit)&ensp;[![crates-io]](https://crates.io/crates/thor-devkit)&ensp;[![docs-rs]](https://docs.rs/thor-devkit)
 //!
 //! [github]: https://img.shields.io/badge/github-8da0cb?style=for-the-badge&labelColor=555555&logo=github
 //! [crates-io]: https://img.shields.io/badge/crates.io-fc8d62?style=for-the-badge&labelColor=555555&logo=rust
@@ -10,26 +11,19 @@
 //!
 //! <br>
 //!
-//! Rust library to aid coding with VeChain, eg. Wallets/Tx/Sign/Verify. 
+//! Rust library to aid coding with VeChain, eg. Wallets/Tx/Sign/Verify.
 //!
 //! <br>
 //!
 //! ## Usage
 //!
 //! ```no_run
-//! use thor_devkit.rs::*;
-//!
-//! #[tokio::main]
-//! async fn main() -> Result<(), Box<dyn std::error::Error>> {
-//!     println!("Hello world!");
-//!
-//!     Ok(())
-//! }
+//! fn main() {}
 //! ```
 //!
 //! ## Examples
 //!
-//! You can check out sample usage of this crate in the [examples/](https://github.com/sterliakov/thor-devkit.rs/tree/main/examples)
+//! You can check out sample usage of this crate in the [examples/](https://github.com/sterliakov/thor-devkit/tree/main/examples)
 //! folder in the project repo on GitHub.
 //!
 //! ## Readme Docs
@@ -37,9 +31,11 @@
 //! You can find the crate's readme documentation on the
 //! [crates.io] page, or alternatively in the [`README.md`] file on the GitHub project repo.
 //!
-//! [crates.io]: https://crates.io/crates/thor-devkit.rs
-//! [`README.md`]: https://github.com/sterliakov/thor-devkit.rs
+//! [crates.io]: https://crates.io/crates/thor-devkit
+//! [`README.md`]: https://github.com/sterliakov/thor-devkit
 //!
+
+pub mod address;
 
 #[cfg(test)]
 mod tests {

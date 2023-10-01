@@ -1,7 +1,7 @@
 GNU GENERAL PUBLIC LICENSE
                       Version 3, 29 June 2007
 
-    Rust library to aid coding with VeChain, eg. Wallets/Tx/Sign/Verify. 
+    Rust library to aid coding with VeChain, eg. Wallets/Tx/Sign/Verify.
     Copyright (C) 2023  Stanislav Terliakov
 
     This program is free software: you can redistribute it and/or modify
