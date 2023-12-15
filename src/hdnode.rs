@@ -134,6 +134,15 @@ impl HDNode {
             Right(pubkey) => pubkey.attrs().chain_code,
         }
     }
+    pub fn address(self) -> crate::address::Address {
+        //! Get the address of current node.
+        use crate::address::AddressConvertible;
+
+        match &self.0 {
+            Left(privkey) => privkey.public_key().public_key().address(),
+            Right(pubkey) => pubkey.public_key().address(),
+        }
+    }
 }
 
 #[cfg(test)]
@@ -191,6 +200,23 @@ mod test {
             decode_hex(chain_code).unwrap(),
             "Chain code differs"
         );
+
+        let addresses = vec![
+            "0x339Fb3C438606519E2C75bbf531fb43a0F449A70",
+            "0x5677099D06Bc72f9da1113aFA5e022feEc424c8E",
+            "0x86231b5CDCBfE751B9DdCD4Bd981fC0A48afe921",
+            "0xd6f184944335f26Ea59dbB603E38e2d434220fcD",
+            "0x2AC1a0AeCd5C80Fb5524348130ab7cf92670470A",
+        ];
+        addresses.into_iter().enumerate().for_each(|(i, addr)| {
+            assert_eq!(
+                node.derive(i as u32)
+                    .unwrap()
+                    .address()
+                    .to_checksum_address(),
+                addr
+            );
+        })
     }
 
     #[test]
