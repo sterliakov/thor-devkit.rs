@@ -1,5 +1,6 @@
 //! VeChain address operations and verifications.
 
+use alloy_rlp::{BufMut, Encodable};
 use keccak_hash::keccak;
 pub use secp256k1::{PublicKey, SecretKey as PrivateKey};
 use std::fmt;
@@ -59,6 +60,15 @@ impl fmt::Display for Address {
             write!(f, "{:02x}", b)?;
         }
         Ok(())
+    }
+}
+
+impl Encodable for Address {
+    fn encode(&self, out: &mut dyn BufMut) {
+        self.0.encode(out)
+    }
+    fn length(&self) -> usize {
+        20
     }
 }
 

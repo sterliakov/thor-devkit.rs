@@ -37,3 +37,4 @@
 
 pub mod address;
 pub mod hdnode;
+pub mod transactions;

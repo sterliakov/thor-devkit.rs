@@ -27,8 +27,10 @@ targets = ["x86_64-unknown-linux-gnu"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+alloy-rlp = { version = "0.3.3", features = ["derive"] }
 bip32 = { version = "0.5.1", features = ["mnemonic", "bip39", "secp256k1-ffi"] }
 either = "1.9.0"
+ethnum = "1.5.0"
 itertools = "0.11.0"
 keccak-hash = "0.10.0"
 secp256k1 = "0.27.0"
