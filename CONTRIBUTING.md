@@ -17,8 +17,7 @@ the `main` branch. I'll review them and either merge or request changes. GitHub 
 tests everything as well, so you may get feedback from it too.
 
 If you make additions or other changes to a pull request, feel free to either amend
-previous commits or only add new ones, however you prefer. I may ask you to squash
-your commits before merging, depending.
+previous commits or only add new ones, however you prefer.
 
 ## Issue Tracker
 

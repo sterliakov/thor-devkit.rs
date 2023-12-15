@@ -6,12 +6,7 @@ description = "Rust library to aid coding with VeChain, eg. Wallets/Tx/Sign/Veri
 documentation = "https://docs.rs/thor-devkit.rs"
 repository = "https://github.com/sterliakov/thor-devkit.rs"
 readme = "README.md"
-keywords = ["thor-devkit.rs",
-            # some ideas:
-            #   "logging",
-            #   "api",
-            #   "async",
-            ]
+keywords = ["thor-devkit.rs"]
 categories = [
     # "api-bindings"
 ]
@@ -32,9 +27,12 @@ targets = ["x86_64-unknown-linux-gnu"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+bip32 = { version = "0.5.1", features = ["mnemonic", "bip39", "secp256k1-ffi"] }
+either = "1.9.0"
 itertools = "0.11.0"
 keccak-hash = "0.10.0"
 secp256k1 = "0.27.0"
+tiny-bip39 = "1.0.0"
 
 [dev-dependencies]
 # version_sync: to ensure versions in `Cargo.toml` and `README.md` are in sync
