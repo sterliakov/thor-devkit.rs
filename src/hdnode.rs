@@ -1,6 +1,6 @@
 //! VeChain-tailored Hierarchically deterministic nodes support
 //!
-//! https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki
+//! `Reference <https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki>`
 
 use std::str::FromStr;
 

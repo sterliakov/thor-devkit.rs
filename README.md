@@ -7,18 +7,6 @@
 
 Rust library to aid coding with VeChain, eg. Wallets/Tx/Sign/Verify.
 
----
-
-This crate works with Cargo with a `Cargo.toml` like:
-
-<!-- Note: the `tokio` dependency can be omitted if this crate doesn't
-require any `async` features. -->
-```toml
-[dependencies]
-thor-devkit = "0.0.1"
-tokio = { version = "1", features = ["full"] }
-```
-
 ## Getting started
 
 Add some usage to your application.

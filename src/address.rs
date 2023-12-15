@@ -26,6 +26,7 @@ pub fn decode_hex(s: &str) -> Result<Vec<u8>, AddressValidationError> {
 /// Represents VeChain address
 #[derive(Eq, PartialEq, Clone, Copy, Debug)]
 pub struct Address([u8; 20]);
+
 impl FromStr for Address {
     type Err = AddressValidationError;
 
