@@ -41,8 +41,13 @@ pub struct Transaction {
     pub nonce: u64,
     /// Reserved fields.
     pub reserved: Option<Reserved>,
-    /// Signature. Set to None before signing.
-    pub signature: Option<[u8; 65]>,
+    /// Signature. 65 bytes for regular transactions, 130 - for VIP-191.
+    ///
+    /// Ignored when making a signing hash.
+    ///
+    /// For VIP-191 transactions, this would be a simple concatenation
+    /// of two signatures.
+    pub signature: Option<Bytes>,
 }
 
 #[derive(Clone, RlpEncodable)]
@@ -75,7 +80,7 @@ impl Encodable for InternalTransactionBody {
             b"".to_vec().encode(out);
         }
         if let Some(s) = self.0.signature.as_ref() {
-            Bytes::from(s.to_vec()).encode(out);
+            s.encode(out);
         }
     }
 }
@@ -115,7 +120,7 @@ impl Transaction {
         let hash = self.get_signing_hash();
         let signature = Self::sign_hash(hash, private_key);
         Self {
-            signature: Some(signature),
+            signature: Some(Bytes::copy_from_slice(&signature)),
             ..self
         }
     }

@@ -1,11 +1,11 @@
 //! VeChain address operations and verifications.
 
 use alloy_rlp::{BufMut, Encodable};
-use keccak_hash::keccak;
 pub use secp256k1::{PublicKey, SecretKey as PrivateKey};
 use std::fmt;
 use std::result::Result;
 use std::str::FromStr;
+use tiny_keccak::{Hasher, Keccak};
 
 pub fn decode_hex(s: &str) -> Result<Vec<u8>, AddressValidationError> {
     //! Convert a hex string (with or without 0x prefix) to binary.
@@ -77,7 +77,10 @@ impl Address {
         //! Create a checksum address
 
         let body = self.to_string();
-        let hash = keccak(&body.clone().into_bytes()[2..42]).to_fixed_bytes();
+        let mut hasher = Keccak::v256();
+        hasher.update(&body.clone().into_bytes()[2..42]);
+        let mut hash = [0; 32];
+        hasher.finalize(&mut hash);
 
         "0x".chars()
             .chain(
@@ -109,7 +112,10 @@ impl AddressConvertible for secp256k1::PublicKey {
     fn address(&self) -> Address {
         //! Generate address from public key.
         // Get rid of the 0x04 (first byte) at the beginning.
-        let hash = keccak(&self.serialize_uncompressed()[1..]).to_fixed_bytes();
+        let mut hasher = Keccak::v256();
+        hasher.update(&self.serialize_uncompressed()[1..]);
+        let mut hash = [0; 32];
+        hasher.finalize(&mut hash);
         // last 20 bytes from the 32 bytes hash.
         Address(hash[12..32].try_into().unwrap())
     }
