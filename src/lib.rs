@@ -38,3 +38,5 @@
 pub mod address;
 pub mod hdnode;
 pub mod transactions;
+mod utils;
+pub use utils::blake2_256;

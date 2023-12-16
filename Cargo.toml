@@ -28,12 +28,13 @@ targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
 alloy-rlp = { version = "0.3.3", features = ["derive"] }
-bip32 = { version = "0.5.1", features = ["mnemonic", "bip39", "secp256k1-ffi"] }
+bip32 = { version = "0.5.1", features = [ "secp256k1-ffi"] }
+blake2 = "0.10.6"
 either = "1.9.0"
 ethnum = "1.5.0"
 itertools = "0.11.0"
 keccak-hash = "0.10.0"
-secp256k1 = "0.27.0"
+secp256k1 = { version = "0.27.0", features = [ "recovery" ] }
 tiny-bip39 = "1.0.0"
 
 [dev-dependencies]

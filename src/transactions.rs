@@ -1,7 +1,11 @@
 //! VeChain transactions support.
-use crate::address::Address;
-use alloy_rlp::{BufMut, Bytes, Encodable, RlpEncodable};
-use ethnum::U256;
+
+use crate::address::{Address, PrivateKey};
+use crate::utils::blake2_256;
+pub use alloy_rlp::Bytes;
+use alloy_rlp::{BufMut, Encodable, RlpEncodable};
+pub use ethnum::U256;
+use secp256k1::{Message, Secp256k1};
 
 fn lstrip<S: AsRef<[u8]>>(bytes: S) -> Vec<u8> {
     bytes
@@ -49,6 +53,8 @@ struct WrappedTransaction {
 #[derive(Clone)]
 struct InternalTransactionBody(Transaction);
 
+// TODO: add decoding capabilities
+// TODO: add serde optional support
 impl Encodable for InternalTransactionBody {
     fn encode(&self, out: &mut dyn BufMut) {
         self.0.chain_tag.encode(out);
@@ -79,6 +85,53 @@ impl Encodable for Transaction {
             body: InternalTransactionBody(self.clone()),
         }
         .encode(out)
+    }
+}
+impl Transaction {
+    pub fn get_signing_hash(&self) -> [u8; 32] {
+        //! Get a signing hash for this transaction.
+        let mut encoded = Vec::with_capacity(1024);
+        let mut without_signature = self.clone();
+        without_signature.signature = None;
+        without_signature.encode(&mut encoded);
+        blake2_256(&[encoded])
+    }
+
+    pub fn get_delegated_signing_hash(&self, delegate_for: &Address) -> [u8; 32] {
+        //! Get a signing hash for this transaction with fee delegation (VIP-191).
+        let mut encoded = Vec::with_capacity(1024);
+        let mut without_signature = self.clone();
+        without_signature.signature = None;
+        without_signature.encode(&mut encoded);
+        let main_hash = blake2_256(&[encoded]);
+        blake2_256(&[main_hash.to_vec(), delegate_for.to_bytes().to_vec()])
+    }
+
+    pub fn sign(self, private_key: PrivateKey) -> Self {
+        //! Create a copy of transaction with a signature emplaced.
+        //!
+        //! You can call `.encode()` on the result to get bytes ready to be sent
+        //! over wire.
+        let hash = self.get_signing_hash();
+        let signature = Self::sign_hash(hash, private_key);
+        Self {
+            signature: Some(signature),
+            ..self
+        }
+    }
+
+    pub fn sign_hash(hash: [u8; 32], private_key: PrivateKey) -> [u8; 65] {
+        //! Sign a hash obtained from `Transaction::get_signing_hash`.
+        let secp = Secp256k1::signing_only();
+        let signature =
+            secp.sign_ecdsa_recoverable(&Message::from_slice(&hash).unwrap(), &private_key);
+        let (recovery_id, bytes) = signature.serialize_compact();
+        bytes
+            .into_iter()
+            .chain([recovery_id.to_i32() as u8])
+            .collect::<Vec<_>>()
+            .try_into()
+            .unwrap()
     }
 }
 
@@ -127,17 +180,22 @@ pub struct Reserved {
     /// Features to enable.
     pub features: u32,
     /// Currently unused field.
-    pub unused: Bytes,
+    pub unused: Vec<Bytes>,
 }
 
 impl Encodable for Reserved {
     fn encode(&self, out: &mut dyn BufMut) {
         let mut buf = vec![];
         self.features.encode(&mut buf);
-        self.unused.encode(&mut buf);
-        let mut stripped_buf = lstrip(buf);
+        let mut stripped_buf: Vec<_> = [buf]
+            .into_iter()
+            .map(Bytes::from)
+            .chain(self.unused.clone())
+            .rev()
+            .skip_while(|b| b.is_empty())
+            .collect();
         stripped_buf.reverse();
-        out.put_slice(&stripped_buf)
+        stripped_buf.encode(out)
     }
 }
 
@@ -181,6 +239,58 @@ mod test {
         };
         let expected = decode_hex(
             "f8540184aabbccdd20f840df947567d83b7b8d80addcb281a71d54fc7b3364ffed82271086000000606060df947567d83b7b8d80addcb281a71d54fc7b3364ffed824e208600000060606081808252088083bc614ec0"
+        ).unwrap();
+        let mut buf = vec![];
+        tx.encode(&mut buf);
+        assert_eq!(buf, expected);
+
+        let pk_str = "7582be841ca040aa940fff6c05773129e135623e41acce3e0b8ba520dc1ae26a";
+        let pk = PrivateKey::from_slice(&decode_hex(pk_str).unwrap()).unwrap();
+        let signature = Transaction::sign_hash(tx.get_signing_hash(), pk);
+        assert_eq!(
+            signature.to_vec(),
+            decode_hex("f76f3c91a834165872aa9464fc55b03a13f46ea8d3b858e528fcceaf371ad6884193c3f313ff8effbb57fe4d1adc13dceb933bedbf9dbb528d2936203d5511df00").unwrap()
+        );
+    }
+
+    #[test]
+    fn test_rlp_encode_delegated() {
+        let tx = Transaction {
+            chain_tag: 1,
+            block_ref: 0xaabbccdd,
+            expiration: 32,
+            clauses: vec![
+                Clause {
+                    to: Some(
+                        "0x7567d83b7b8d80addcb281a71d54fc7b3364ffed"
+                            .parse()
+                            .unwrap(),
+                    ),
+                    value: U256::new(10000),
+                    data: b"\x00\x00\x00\x60\x60\x60".to_vec().into(),
+                },
+                Clause {
+                    to: Some(
+                        "0x7567d83b7b8d80addcb281a71d54fc7b3364ffed"
+                            .parse()
+                            .unwrap(),
+                    ),
+                    value: U256::new(20000),
+                    data: b"\x00\x00\x00\x60\x60\x60".to_vec().into(),
+                },
+            ],
+            gas_price_coef: 128,
+            gas: 21000,
+            depends_on: None,
+            nonce: 0xbc614e,
+            reserved: Some(Reserved {
+                features: 1,
+                unused: vec![Bytes::from(b"1234".to_vec())],
+            }),
+            signature: None,
+        };
+        let expected = decode_hex(
+            "f85a0184aabbccdd20f840df947567d83b7b8d80addcb281a71d54fc7b3364ffed82271086000000606060df947567d83b7b8d80addcb281a71d54fc7b3364ffed824e208600000060606081808252088083bc614ec6018431323334"
         ).unwrap();
         let mut buf = vec![];
         tx.encode(&mut buf);
