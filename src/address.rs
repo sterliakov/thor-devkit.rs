@@ -7,7 +7,7 @@ use std::result::Result;
 use std::str::FromStr;
 use tiny_keccak::{Hasher, Keccak};
 
-pub fn decode_hex(s: &str) -> Result<Vec<u8>, AddressValidationError> {
+pub(crate) fn decode_hex(s: &str) -> Result<Vec<u8>, AddressValidationError> {
     //! Convert a hex string (with or without 0x prefix) to binary.
     let prefix = if s.starts_with("0x") { 2 } else { 0 };
     (0..s.len())

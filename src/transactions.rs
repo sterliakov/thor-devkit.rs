@@ -3,7 +3,7 @@
 use crate::address::{Address, AddressConvertible, PrivateKey};
 use crate::utils::blake2_256;
 pub use alloy_rlp::Bytes;
-use alloy_rlp::{BufMut, Encodable, RlpEncodable};
+use alloy_rlp::{Buf, BufMut, Decodable, Encodable, RlpDecodable, RlpEncodable};
 pub use ethnum::U256;
 use secp256k1::ecdsa::{RecoverableSignature, RecoveryId};
 use secp256k1::{Message, PublicKey, Secp256k1};
@@ -18,13 +18,13 @@ fn lstrip<S: AsRef<[u8]>>(bytes: S) -> Vec<u8> {
 }
 
 /// Represents a single VeChain transaction.
-#[derive(Clone)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Transaction {
     /// Chain tag
     pub chain_tag: u8,
     /// Previous block reference
     ///
-    /// First 4 bytes are block height, the rest is part of referred block ID.
+    /// First 4 bytes (BE) are block height, the rest is part of referred block ID.
     pub block_ref: u64,
     /// Expiration (in blocks)
     pub expiration: u32,
@@ -48,20 +48,19 @@ pub struct Transaction {
     ///
     /// For VIP-191 transactions, this would be a simple concatenation
     /// of two signatures.
-    pub signature: Option<Bytes>,
+    signature: Option<Bytes>,
 }
 
-#[derive(Clone, RlpEncodable)]
-struct WrappedTransaction {
-    body: InternalTransactionBody,
+#[derive(Clone, Debug, Eq, PartialEq, RlpEncodable, RlpDecodable)]
+struct WrappedInternalTransaction {
+    body: InternalTransaction,
 }
 
-#[derive(Clone)]
-struct InternalTransactionBody(Transaction);
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct InternalTransaction(Transaction);
 
-// TODO: add decoding capabilities
 // TODO: add serde optional support
-impl Encodable for InternalTransactionBody {
+impl Encodable for InternalTransaction {
     fn encode(&self, out: &mut dyn BufMut) {
         self.0.chain_tag.encode(out);
         self.0.block_ref.encode(out);
@@ -85,14 +84,77 @@ impl Encodable for InternalTransactionBody {
         }
     }
 }
+impl Decodable for InternalTransaction {
+    fn decode(buf: &mut &[u8]) -> Result<Self, alloy_rlp::Error> {
+        alloy_rlp::Header::decode(buf)?;
+        Ok(Self(Transaction {
+            chain_tag: u8::decode(buf)?,
+            block_ref: u64::decode(buf)?,
+            expiration: u32::decode(buf)?,
+            clauses: Vec::<Clause>::decode(buf)?,
+            gas_price_coef: u8::decode(buf)?,
+            gas: u64::decode(buf)?,
+            depends_on: {
+                let binary = Bytes::decode(buf)?;
+                if binary.is_empty() {
+                    None
+                } else {
+                    Some(
+                        binary
+                            .to_vec()
+                            .try_into()
+                            .map_err(|_| alloy_rlp::Error::Custom("Invalid depends_on length"))?,
+                    )
+                }
+            },
+            nonce: u64::decode(buf)?,
+            reserved: {
+                println!("One <- {:?}", buf);
+                let binary = Vec::<Bytes>::decode(buf)?;
+                println!("One: {:?}", binary);
+                let mut temp_buf = vec![];
+                binary.encode(&mut temp_buf);
+                println!("One': {:?}", temp_buf);
+                if binary.is_empty() {
+                    None
+                } else {
+                    Some(Reserved::decode(&mut &temp_buf[..])?)
+                }
+            },
+            signature: {
+                if buf.remaining() == 0 {
+                    None
+                } else {
+                    println!("Two");
+                    let binary = Bytes::decode(buf)?;
+                    if binary.is_empty() {
+                        None
+                    } else {
+                        Some(binary)
+                    }
+                }
+            },
+        }))
+    }
+}
+
 impl Encodable for Transaction {
     fn encode(&self, out: &mut dyn BufMut) {
-        WrappedTransaction {
-            body: InternalTransactionBody(self.clone()),
+        WrappedInternalTransaction {
+            body: InternalTransaction(self.clone()),
         }
         .encode(out)
     }
 }
+impl Decodable for Transaction {
+    fn decode(buf: &mut &[u8]) -> Result<Self, alloy_rlp::Error> {
+        let WrappedInternalTransaction {
+            body: InternalTransaction(clause),
+        } = WrappedInternalTransaction::decode(buf)?;
+        Ok(clause)
+    }
+}
+
 impl Transaction {
     /// Gas cost for whole transaction execution.
     pub const TRANSACTION_GAS: u64 = 5_000;
@@ -129,15 +191,24 @@ impl Transaction {
             .expect("generated signature must be correct")
     }
 
+    fn signature_length_valid(&self) -> bool {
+        match &self.signature {
+            None => true,
+            Some(signature) => {
+                self.is_delegated() && signature.len() == 130
+                    || !self.is_delegated() && signature.len() == 65
+            }
+        }
+    }
+
     pub fn with_signature(self, signature: Bytes) -> Result<Self, secp256k1::Error> {
         //! Set a signature for this transaction.
-        if self.is_delegated() && signature.len() == 130
-            || !self.is_delegated() && signature.len() == 65
-        {
-            Ok(Self {
-                signature: Some(signature),
-                ..self
-            })
+        let copy = Self {
+            signature: Some(signature),
+            ..self
+        };
+        if copy.signature_length_valid() {
+            Ok(copy)
         } else {
             Err(secp256k1::Error::IncorrectSignature)
         }
@@ -176,7 +247,7 @@ impl Transaction {
         //! Returns `Ok(None)` if signature is unset.
         match &self.signature {
             None => Ok(None),
-            Some(signature) => {
+            Some(signature) if self.signature_length_valid() => {
                 let hash = self.get_signing_hash();
                 let secp = Secp256k1::verification_only();
 
@@ -188,6 +259,7 @@ impl Transaction {
                     )?,
                 )?))
             }
+            _ => Err(secp256k1::Error::IncorrectSignature),
         }
     }
 
@@ -200,7 +272,7 @@ impl Transaction {
         }
         match &self.signature {
             None => Ok(None),
-            Some(signature) => {
+            Some(signature) if self.signature_length_valid() => {
                 let hash = self.get_delegate_signing_hash(
                     &self
                         .origin()?
@@ -217,6 +289,7 @@ impl Transaction {
                     )?,
                 )?))
             }
+            _ => Err(secp256k1::Error::IncorrectSignature),
         }
     }
 
@@ -241,10 +314,20 @@ impl Transaction {
             ]))),
         }
     }
+
+    pub fn signature(self) -> Option<Bytes> {
+        //! Signature. 65 bytes for regular transactions, 130 - for VIP-191.
+        //!
+        //! Ignored when making a signing hash.
+        //!
+        //! For VIP-191 transactions, this would be a simple concatenation
+        //! of two signatures.
+        self.signature
+    }
 }
 
 /// Represents a single transaction clause (recipient, value and data).
-#[derive(Clone)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Clause {
     /// Recipient
     pub to: Option<Address>,
@@ -254,16 +337,57 @@ pub struct Clause {
     pub data: Bytes,
 }
 
+#[derive(Clone)]
+struct InternalClause(Clause);
+#[derive(Clone, RlpEncodable, RlpDecodable)]
+struct WrappedInternalClause(InternalClause);
+
 impl Encodable for Clause {
     fn encode(&self, out: &mut dyn BufMut) {
-        let mut enc = vec![];
-        self.encode_internal(&mut enc);
-        alloy_rlp::Header {
-            list: true,
-            payload_length: enc.len(),
+        WrappedInternalClause(InternalClause(self.clone())).encode(out)
+    }
+}
+impl Decodable for Clause {
+    fn decode(buf: &mut &[u8]) -> Result<Self, alloy_rlp::Error> {
+        let WrappedInternalClause(InternalClause(clause)) = WrappedInternalClause::decode(buf)?;
+        Ok(clause)
+    }
+}
+
+impl Encodable for InternalClause {
+    fn encode(&self, out: &mut dyn BufMut) {
+        if let Some(a) = self.0.to {
+            a.encode(out)
+        } else {
+            b"".encode(out);
         }
-        .encode(out);
-        out.put_slice(&enc);
+
+        let value = lstrip(self.0.value.to_be_bytes());
+        Bytes::from(value).encode(out);
+
+        self.0.data.encode(out);
+    }
+}
+impl Decodable for InternalClause {
+    fn decode(buf: &mut &[u8]) -> Result<Self, alloy_rlp::Error> {
+        let address = Bytes::decode(buf)?;
+        let address: Option<Address> = if address.is_empty() {
+            None
+        } else {
+            Some(
+                address
+                    .to_vec()
+                    .try_into()
+                    .map_err(|_| alloy_rlp::Error::Custom("Invalid address bytes"))?,
+            )
+        };
+        let value = U256::from_be_bytes(static_left_pad(&Bytes::decode(buf)?)?);
+        let data = Bytes::decode(buf)?;
+        Ok(Self(Clause {
+            to: address,
+            value,
+            data,
+        }))
     }
 }
 
@@ -276,19 +400,6 @@ impl Clause {
     pub const ZERO_DATA_BYTE_GAS_COST: u64 = 4;
     /// Intrinsic gas usage for a single non-zero byte of data.
     pub const NONZERO_DATA_BYTE_GAS_COST: u64 = 68;
-
-    fn encode_internal(&self, out: &mut dyn BufMut) {
-        if let Some(a) = self.to {
-            a.encode(out)
-        } else {
-            b"".to_vec().encode(out);
-        }
-
-        let value = lstrip(self.value.to_be_bytes());
-        Bytes::from(value).encode(out);
-
-        self.data.encode(out);
-    }
 
     pub fn intrinsic_gas(&self) -> u64 {
         //! Calculate the intrinsic gas amount required for executing this clause.
@@ -316,7 +427,7 @@ impl Clause {
 }
 
 /// Represents a transaction's ``reserved`` field.
-#[derive(Clone)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Reserved {
     /// Features to enable (bitmask).
     pub features: u32,
@@ -340,6 +451,19 @@ impl Encodable for Reserved {
     }
 }
 
+impl Decodable for Reserved {
+    fn decode(buf: &mut &[u8]) -> Result<Self, alloy_rlp::Error> {
+        if let Some((feature_bytes, unused)) = Vec::<Bytes>::decode(buf)?.split_first() {
+            Ok(Self {
+                features: u32::from_be_bytes(static_left_pad(feature_bytes)?),
+                unused: unused.to_vec(),
+            })
+        } else {
+            Ok(Self::new_empty())
+        }
+    }
+}
+
 impl Reserved {
     /// Features bitmask for delegated transaction.
     pub const DELEGATED_BIT: u32 = 1;
@@ -351,10 +475,38 @@ impl Reserved {
             unused: vec![],
         }
     }
+    pub fn new_empty() -> Self {
+        //! Create reserved structure kind for regular transaction.
+        Self {
+            features: 0,
+            unused: vec![],
+        }
+    }
     pub fn is_delegated(&self) -> bool {
         //! Belongs to delegated transaction?
         self.features & Self::DELEGATED_BIT != 0
     }
+}
+
+#[inline]
+pub(crate) fn static_left_pad<const N: usize>(data: &[u8]) -> Result<[u8; N], alloy_rlp::Error> {
+    if data.len() > N {
+        return Err(alloy_rlp::Error::Overflow);
+    }
+
+    let mut v = [0; N];
+
+    if data.is_empty() {
+        return Ok(v);
+    }
+
+    if data[0] == 0 {
+        return Err(alloy_rlp::Error::LeadingZero);
+    }
+
+    // SAFETY: length checked above
+    unsafe { v.get_unchecked_mut(N - data.len()..) }.copy_from_slice(data);
+    Ok(v)
 }
 
 #[cfg(test)]
@@ -429,6 +581,10 @@ mod test {
         let mut buf = vec![];
         tx.encode(&mut buf);
         assert_eq!(buf, expected);
+        assert_eq!(
+            Transaction::decode(&mut &buf[..]).expect("Must be decodable"),
+            tx
+        );
     }
 
     #[test]
@@ -440,6 +596,10 @@ mod test {
         let mut buf = vec![];
         tx.encode(&mut buf);
         assert_eq!(buf, expected);
+        assert_eq!(
+            Transaction::decode(&mut &buf[..]).expect("Must be decodable"),
+            tx
+        );
     }
 
     #[test]
@@ -457,10 +617,15 @@ mod test {
         let mut buf = vec![];
         tx.encode(&mut buf);
         assert_eq!(buf, expected);
+        // Whole reserved component should've been trimmed
+        assert_eq!(
+            Transaction::decode(&mut &buf[..]).expect("Must be decodable"),
+            undelegated_tx!()
+        );
     }
 
     #[test]
-    fn test_rlp_encode_reserved_features() {
+    fn test_rlp_encode_reserved_can_be_omitted() {
         let tx = Transaction {
             reserved: Some(Reserved {
                 features: 0,
@@ -490,7 +655,11 @@ mod test {
         };
         let mut buf = vec![];
         reserved.encode(&mut buf);
-        assert_eq!(buf, vec![0xC7, 0x01, 0x82, 0x0F, 0x0F, 0x82, 0x01, 0x01],)
+        assert_eq!(buf, vec![0xC7, 0x01, 0x82, 0x0F, 0x0F, 0x82, 0x01, 0x01]);
+        assert_eq!(
+            Reserved::decode(&mut &buf[..]).expect("Must be decodable"),
+            reserved
+        );
     }
 
     #[test]
@@ -501,7 +670,7 @@ mod test {
         };
         let mut buf = vec![];
         reserved.encode(&mut buf);
-        assert_eq!(buf, vec![0xC4, 0x01, 0x82, 0x0F, 0x0F],)
+        assert_eq!(buf, vec![0xC4, 0x01, 0x82, 0x0F, 0x0F]);
     }
 
     #[test]
@@ -512,19 +681,12 @@ mod test {
         };
         let mut buf = vec![];
         reserved.encode(&mut buf);
-        assert_eq!(buf, vec![0xC4, 0x80, 0x82, 0x0F, 0x0F],)
+        assert_eq!(buf, vec![0xC4, 0x80, 0x82, 0x0F, 0x0F]);
     }
 
     #[test]
     fn test_sign_undelegated() {
         let tx = undelegated_tx!();
-        let expected = decode_hex(
-            "f8540184aabbccdd20f840df947567d83b7b8d80addcb281a71d54fc7b3364ffed82271086000000606060df947567d83b7b8d80addcb281a71d54fc7b3364ffed824e208600000060606081808252088083bc614ec0"
-        ).unwrap();
-        let mut buf = vec![];
-        tx.encode(&mut buf);
-        assert_eq!(buf, expected);
-
         let pk = make_pk!();
         let hash = tx.get_signing_hash();
         assert_eq!(
@@ -538,7 +700,14 @@ mod test {
         );
 
         let signed = tx.sign(&pk);
-        assert_eq!(signed.signature.unwrap(), signature.to_vec())
+        assert_eq!(signed.signature.clone().unwrap(), signature.to_vec());
+
+        let mut buf = vec![];
+        signed.encode(&mut buf);
+        assert_eq!(
+            Transaction::decode(&mut &buf[..]).expect("Must be decodable"),
+            signed
+        );
     }
 
     #[test]
@@ -563,6 +732,12 @@ mod test {
         assert_eq!(
             tx.delegator().unwrap(),
             Some(gas_payer.public_key(&Secp256k1::signing_only()))
+        );
+        let mut buf = vec![];
+        tx.encode(&mut buf);
+        assert_eq!(
+            Transaction::decode(&mut &buf[..]).expect("Must be decodable"),
+            tx
         );
     }
 
@@ -594,6 +769,66 @@ mod test {
         assert_eq!(tx.id(), Ok(None));
         assert_eq!(tx.origin(), Ok(None));
         assert_eq!(tx.delegator(), Ok(None));
+    }
+
+    #[test]
+    fn test_undelegated_malformed_signature_properties() {
+        let tx = Transaction {
+            signature: Some(Bytes::copy_from_slice(b"\x01\x02\x03")),
+            ..undelegated_tx!()
+        };
+        assert!(!tx.is_delegated());
+        assert_eq!(tx.id(), Err(secp256k1::Error::IncorrectSignature));
+        assert_eq!(tx.origin(), Err(secp256k1::Error::IncorrectSignature));
+        assert_eq!(tx.delegator(), Ok(None));
+    }
+
+    #[test]
+    fn test_undelegated_malformed_signature_2_properties() {
+        let tx = Transaction {
+            signature: Some(Bytes::copy_from_slice(&(0..65).collect::<Vec<_>>())),
+            ..undelegated_tx!()
+        };
+        assert!(!tx.is_delegated());
+        assert_eq!(tx.id(), Err(secp256k1::Error::InvalidRecoveryId));
+        assert_eq!(tx.origin(), Err(secp256k1::Error::InvalidRecoveryId));
+        assert_eq!(tx.delegator(), Ok(None));
+    }
+
+    #[test]
+    fn test_delegated_malformed_signature_properties() {
+        let tx = Transaction {
+            signature: Some(Bytes::copy_from_slice(b"\x01\x02\x03")),
+            ..delegated_tx!()
+        };
+        assert!(tx.is_delegated());
+        assert_eq!(tx.id(), Err(secp256k1::Error::IncorrectSignature));
+        assert_eq!(tx.origin(), Err(secp256k1::Error::IncorrectSignature));
+        assert_eq!(tx.delegator(), Err(secp256k1::Error::IncorrectSignature));
+    }
+
+    #[test]
+    fn test_delegated_malformed_signature_2_properties() {
+        let tx = Transaction {
+            signature: Some(Bytes::copy_from_slice(&(0..65).collect::<Vec<_>>())),
+            ..delegated_tx!()
+        };
+        assert!(tx.is_delegated());
+        assert_eq!(tx.id(), Err(secp256k1::Error::IncorrectSignature));
+        assert_eq!(tx.origin(), Err(secp256k1::Error::IncorrectSignature));
+        assert_eq!(tx.delegator(), Err(secp256k1::Error::IncorrectSignature));
+    }
+
+    #[test]
+    fn test_delegated_malformed_signature_3_properties() {
+        let tx = Transaction {
+            signature: Some(Bytes::copy_from_slice(&(0..130).collect::<Vec<_>>())),
+            ..delegated_tx!()
+        };
+        assert!(tx.is_delegated());
+        assert_eq!(tx.id(), Err(secp256k1::Error::InvalidRecoveryId));
+        assert_eq!(tx.origin(), Err(secp256k1::Error::InvalidRecoveryId));
+        assert_eq!(tx.delegator(), Err(secp256k1::Error::InvalidRecoveryId));
     }
 
     #[test]

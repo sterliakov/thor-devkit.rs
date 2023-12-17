@@ -1,6 +1,5 @@
 #![doc(html_root_url = "https://docs.rs/thor-devkit/0.1.0-alpha.1")]
 #![warn(rust_2018_idioms, missing_docs)]
-// #![deny(warnings, dead_code, unused_imports, unused_mut)]
 #![deny(dead_code, unused_imports, unused_mut)]
 
 //! [![github]](https://github.com/sterliakov/thor-devkit)&ensp;[![crates-io]](https://crates.io/crates/thor-devkit)&ensp;[![docs-rs]](https://docs.rs/thor-devkit)
@@ -17,7 +16,7 @@
 //!
 //! ## Usage
 //!
-//! ```no_run
+//! ```
 //! fn main() {}
 //! ```
 //!
