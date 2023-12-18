@@ -39,9 +39,9 @@ version-sync = "0.9.4"
 # actually, the docs recommend installing this globally:
 #   $ git clone https://github.com/rnag/cargo-bump && cd cargo-bump && cargo install --path . && cd .. && rm -rf cargo-bump
 # logging utilities
-log = "^0.4"
-sensible-env-logger = "0.1.0"
+# log = "^0.4"
+# sensible-env-logger = "0.1.0"
 # tokio: for `async` support
-tokio = { version = "^1.0", features = ["macros", "rt-multi-thread"] }
+# tokio = { version = "^1.0", features = ["macros", "rt-multi-thread"] }
 
 [features]

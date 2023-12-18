@@ -37,7 +37,7 @@ pub struct Transaction {
     /// Hash of transaction on which current transaction depends.
     ///
     /// May be left unspecified if this functionality is not necessary.
-    pub depends_on: Option<[u8; 64]>,
+    pub depends_on: Option<[u8; 32]>,
     /// Transaction nonce
     pub nonce: u64,
     /// Reserved fields.
@@ -87,7 +87,7 @@ impl Encodable for InternalTransaction {
 impl Decodable for InternalTransaction {
     fn decode(buf: &mut &[u8]) -> Result<Self, alloy_rlp::Error> {
         alloy_rlp::Header::decode(buf)?;
-        Ok(Self(Transaction {
+        let tx = Self(Transaction {
             chain_tag: u8::decode(buf)?,
             block_ref: u64::decode(buf)?,
             expiration: u32::decode(buf)?,
@@ -99,22 +99,19 @@ impl Decodable for InternalTransaction {
                 if binary.is_empty() {
                     None
                 } else {
-                    Some(
-                        binary
-                            .to_vec()
-                            .try_into()
-                            .map_err(|_| alloy_rlp::Error::Custom("Invalid depends_on length"))?,
-                    )
+                    Some(binary.to_vec().try_into().map_err(|_| {
+                        alloy_rlp::Error::ListLengthMismatch {
+                            expected: 32,
+                            got: binary.len(),
+                        }
+                    })?)
                 }
             },
             nonce: u64::decode(buf)?,
             reserved: {
-                println!("One <- {:?}", buf);
                 let binary = Vec::<Bytes>::decode(buf)?;
-                println!("One: {:?}", binary);
                 let mut temp_buf = vec![];
                 binary.encode(&mut temp_buf);
-                println!("One': {:?}", temp_buf);
                 if binary.is_empty() {
                     None
                 } else {
@@ -125,16 +122,18 @@ impl Decodable for InternalTransaction {
                 if buf.remaining() == 0 {
                     None
                 } else {
-                    println!("Two");
-                    let binary = Bytes::decode(buf)?;
-                    if binary.is_empty() {
-                        None
-                    } else {
-                        Some(binary)
-                    }
+                    Some(Bytes::decode(buf)?)
                 }
             },
-        }))
+        });
+        if tx.0.signature_length_valid() {
+            Ok(tx)
+        } else {
+            Err(alloy_rlp::Error::ListLengthMismatch {
+                expected: if tx.0.is_delegated() { 130 } else { 65 },
+                got: tx.0.signature.expect("Already checked to be present").len(),
+            })
+        }
     }
 }
 
@@ -315,14 +314,14 @@ impl Transaction {
         }
     }
 
-    pub fn signature(self) -> Option<Bytes> {
+    pub fn signature(&self) -> Option<Bytes> {
         //! Signature. 65 bytes for regular transactions, 130 - for VIP-191.
         //!
         //! Ignored when making a signing hash.
         //!
         //! For VIP-191 transactions, this would be a simple concatenation
         //! of two signatures.
-        self.signature
+        self.signature.clone()
     }
 }
 
@@ -371,16 +370,17 @@ impl Encodable for InternalClause {
 impl Decodable for InternalClause {
     fn decode(buf: &mut &[u8]) -> Result<Self, alloy_rlp::Error> {
         let address = Bytes::decode(buf)?;
-        let address: Option<Address> = if address.is_empty() {
-            None
-        } else {
-            Some(
-                address
-                    .to_vec()
-                    .try_into()
-                    .map_err(|_| alloy_rlp::Error::Custom("Invalid address bytes"))?,
-            )
-        };
+        let address: Option<Address> =
+            if address.is_empty() {
+                None
+            } else {
+                Some(address.to_vec().try_into().map_err(|_| {
+                    alloy_rlp::Error::ListLengthMismatch {
+                        expected: 20,
+                        got: address.len(),
+                    }
+                })?)
+            };
         let value = U256::from_be_bytes(static_left_pad(&Bytes::decode(buf)?)?);
         let data = Bytes::decode(buf)?;
         Ok(Self(Clause {
@@ -645,6 +645,42 @@ mod test {
     }
 
     #[test]
+    fn test_rlp_encode_depends_on() {
+        // Verified on-chain after signing.
+        let tx = Transaction {
+            depends_on: Some(
+                decode_hex("360341090d2c4a01fa7da816c57d51c0b2fa3fcf1f99141806efc99f568c0b2a")
+                    .unwrap()
+                    .try_into()
+                    .unwrap(),
+            ),
+            ..undelegated_tx!()
+        };
+        let mut buf = vec![];
+        tx.encode(&mut buf);
+        let expected = decode_hex("f8740184aabbccdd20f840df947567d83b7b8d80addcb281a71d54fc7b3364ffed82271086000000606060df947567d83b7b8d80addcb281a71d54fc7b3364ffed824e20860000006060608180825208a0360341090d2c4a01fa7da816c57d51c0b2fa3fcf1f99141806efc99f568c0b2a83bc614ec0").unwrap();
+        assert_eq!(buf, expected);
+
+        assert_eq!(
+            Transaction::decode(&mut &buf[..]).expect("Must be decodable"),
+            tx
+        );
+    }
+
+    #[test]
+    fn test_rlp_encode_depends_on_malformed() {
+        // Manually crafted: here depends_on is 31 bytes long.
+        let malformed = decode_hex("f8730184aabbccdd20f840df947567d83b7b8d80addcb281a71d54fc7b3364ffed82271086000000606060df947567d83b7b8d80addcb281a71d54fc7b3364ffed824e208600000060606081808252089f3603090d2c4a01fa7da816c57d51c0b2fa3fcf1f99141806efc99f568c0b2a83bc614ec0").unwrap();
+        assert_eq!(
+            Transaction::decode(&mut &malformed[..]).unwrap_err(),
+            alloy_rlp::Error::ListLengthMismatch {
+                expected: 32,
+                got: 31
+            }
+        );
+    }
+
+    #[test]
     fn test_rlp_encode_reserved_unused() {
         let reserved = Reserved {
             features: 1,
@@ -700,7 +736,7 @@ mod test {
         );
 
         let signed = tx.sign(&pk);
-        assert_eq!(signed.signature.clone().unwrap(), signature.to_vec());
+        assert_eq!(signed.signature().unwrap(), signature.to_vec());
 
         let mut buf = vec![];
         signed.encode(&mut buf);
@@ -772,6 +808,16 @@ mod test {
     }
 
     #[test]
+    fn test_delegated_unsigned_properties() {
+        let tx = delegated_tx!();
+        assert!(tx.is_delegated());
+        assert_eq!(tx.signature, None);
+        assert_eq!(tx.id(), Ok(None));
+        assert_eq!(tx.origin(), Ok(None));
+        assert_eq!(tx.delegator(), Ok(None));
+    }
+
+    #[test]
     fn test_undelegated_malformed_signature_properties() {
         let tx = Transaction {
             signature: Some(Bytes::copy_from_slice(b"\x01\x02\x03")),
@@ -781,6 +827,57 @@ mod test {
         assert_eq!(tx.id(), Err(secp256k1::Error::IncorrectSignature));
         assert_eq!(tx.origin(), Err(secp256k1::Error::IncorrectSignature));
         assert_eq!(tx.delegator(), Ok(None));
+    }
+
+    #[test]
+    fn test_with_signature_validated() {
+        let tx = undelegated_tx!();
+        assert_eq!(
+            tx.with_signature(Bytes::copy_from_slice(b"\x01\x02\x03")),
+            Err(secp256k1::Error::IncorrectSignature)
+        );
+    }
+
+    #[test]
+    fn test_decode_real() {
+        let src = decode_hex("f8804a880106f4db1482fd5a81b4e1e09477845a52acad7fe6a346f5b09e5e89e7caec8e3b890391c64cd2bc206c008080828ca08088a63565b632b9b7c3c0b841d76de99625a1a8795e467d509818701ec5961a8a4cf7cc2d75cee95f9ad70891013aaa4088919cc46df4f1e3f87b4ea44d002033fa3f7bd69485cb807aa2985100").unwrap();
+        let tx = Transaction::decode(&mut &src[..]).unwrap();
+        let mut buf = vec![];
+        tx.encode(&mut buf);
+        assert_eq!(buf, src);
+    }
+
+    #[test]
+    fn test_decode_real_delegated() {
+        let src = decode_hex("f9011f27880107b55a710b022420f87ef87c9412e3582d7ca22234f39d2a7be12c98ea9c077e2580b864b391c7d37674686f2d7573640000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000085bb373400000000000000000000000000000000000000000000000000000000657f828f8180830136798086018c7a1602b1c101b882abd35e0d57fd07462b8517109797bd2608f97a4961d0bb1fbc09d4a2f4983c2230d8a6cb4f3136e49f58eb6d32cf5edad2b0f69af6f0bf767d502a8f5510824101d87ae764add6cddff325122bf5658364fa2a04ad538621bfeb40c56c7185cf28031d9b945e7a124f171daa232499038312de60b3db4cdd6beecde6c8c0c967a100").unwrap();
+        let tx = Transaction::decode(&mut &src[..]).unwrap();
+        let mut buf = vec![];
+        tx.encode(&mut buf);
+        assert_eq!(buf, src);
+    }
+
+    #[test]
+    fn test_decode_delegated_signature_too_short() {
+        let src = decode_hex("f9011e27880107b55a710b022420f87ef87c9412e3582d7ca22234f39d2a7be12c98ea9c077e2580b864b391c7d37674686f2d7573640000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000085bb373400000000000000000000000000000000000000000000000000000000657f828f8180830136798086018c7a1602b1c101b881abd35e0d57fd07462b8517109797bd2608f97a4961d0bb1fbc09d4a2f4983c2230d8a6cb4f3136e49f58eb6d32cf5edad2b0f69af6f0bf767d502a8f5510824101d87ae764add6cddff325122bf5658364fa2a04ad538621bfeb40c56c7185cf28031d9b945e7a124f171daa232499038312de60b3db4cdd6beecde6c8c0c967a1").unwrap();
+        assert_eq!(
+            Transaction::decode(&mut &src[..]).unwrap_err(),
+            alloy_rlp::Error::ListLengthMismatch {
+                expected: 130,
+                got: 129
+            }
+        )
+    }
+
+    #[test]
+    fn test_decode_delegated_signature_too_long() {
+        let src = decode_hex("f9012027880107b55a710b022420f87ef87c9412e3582d7ca22234f39d2a7be12c98ea9c077e2580b864b391c7d37674686f2d7573640000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000085bb373400000000000000000000000000000000000000000000000000000000657f828f8180830136798086018c7a1602b1c101b883abd35e0d57fd07462b8517109797bd2608f97a4961d0bb1fbc09d4a2f4983c2230d8a6cb4f3136e49f58eb6d32cf5edad2b0f69af6f0bf767d502a8f5510824101d87ae764add6cddff325122bf5658364fa2a04ad538621bfeb40c56c7185cf28031d9b945e7a124f171daa232499038312de60b3db4cdd6beecde6c8c0c967a10101").unwrap();
+        assert_eq!(
+            Transaction::decode(&mut &src[..]).unwrap_err(),
+            alloy_rlp::Error::ListLengthMismatch {
+                expected: 130,
+                got: 131
+            }
+        )
     }
 
     #[test]

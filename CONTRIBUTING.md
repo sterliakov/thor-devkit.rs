@@ -25,19 +25,34 @@ You can find the issue tracker [on
 GitHub](https://github.com/sterliakov/thor-devkit.rs/issues). If you've found a
 problem with **thor-devkit.rs**, please open an issue there.
 
-<!--
-We use the following labels:
-
-* `enhancement`: This is for any request for new sections or functionality.
-* `bug`: This is for anything that's in `thor-devkit.rs`, but incorrect or not working.
-* `discussion`: A discussion about improving something in `thor-devkit.rs`; this may
-* lead to new enhancement or bug issues.
--->
 
 ## Development workflow
 
-Check out the `README.md` under the [examples/ folder](examples/README.md) for details
-on the development process.
+First, we use [`pre-commit`](https://pre-commit.com/) for linters aggregation. After cloning the repo
+make sure to install `pre-commit` (if you have python installed, it's as simple as
+`pip install pre-commit`) and execute the following command:
+
+```bash
+pre-commit install
+```
+
+This will make sure that linters are run against every commit you make.
+
+To run tests, use standard
+
+```bash
+cargo test
+```
+
+To run tests with measuring coverage (beware: this is much slower and includes full recompilation), install [`tarpaulin`](https://github.com/xd009642/tarpaulin) via `cargo install cargo-tarpaulin` and use
+
+```bash
+cargo tarpaulin --out Html
+```
+
+You will find coverage in `tarpaulin-report.html` (gitignored) file at the root
+of repository.
+
 
 ## Examples
 Do you want to help show off some ways for how the library works? Feel free to

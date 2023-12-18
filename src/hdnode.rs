@@ -17,12 +17,15 @@ pub const VET_EXTERNAL_PATH: &str = "m/44'/818'/0'/0";
 
 // TODO: add zeroize
 // TODO: wrap with custom, more human-friendly errors
+// TODO: replace Either with plain enum
 
 /// HD Node wrapper
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct HDNode(Either<ExtendedPrivateKey<PrivateKey>, ExtendedPublicKey<PublicKey>>);
 
 impl HDNode {
+    // TODO: reconsider naming (perhaps _vet should be default)
+
     pub fn from_seed_vet<S: AsRef<[u8]>>(seed: S) -> Result<Self> {
         //! Create an HDNode from seed using default derivation path.
         Self::from_seed(seed, VET_EXTERNAL_PATH)

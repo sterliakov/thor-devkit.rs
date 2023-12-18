@@ -1,6 +1,6 @@
 //! VeChain address operations and verifications.
 
-use alloy_rlp::{BufMut, Encodable};
+use alloy_rlp::{RlpDecodableWrapper, RlpEncodableWrapper};
 pub use secp256k1::{PublicKey, SecretKey as PrivateKey};
 use std::fmt;
 use std::result::Result;
@@ -25,7 +25,7 @@ pub(crate) fn decode_hex(s: &str) -> Result<Vec<u8>, AddressValidationError> {
 }
 
 /// Represents VeChain address
-#[derive(Eq, PartialEq, Clone, Copy, Debug)]
+#[derive(Eq, PartialEq, Clone, Copy, Debug, RlpDecodableWrapper, RlpEncodableWrapper)]
 pub struct Address([u8; 20]);
 
 impl FromStr for Address {
@@ -60,15 +60,6 @@ impl fmt::Display for Address {
             write!(f, "{:02x}", b)?;
         }
         Ok(())
-    }
-}
-
-impl Encodable for Address {
-    fn encode(&self, out: &mut dyn BufMut) {
-        self.0.encode(out)
-    }
-    fn length(&self) -> usize {
-        20
     }
 }
 
