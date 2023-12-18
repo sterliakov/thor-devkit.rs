@@ -44,7 +44,7 @@ To run tests, use standard
 cargo test
 ```
 
-To run tests with measuring coverage (beware: this is much slower and includes full recompilation), install [`tarpaulin`](https://github.com/xd009642/tarpaulin) via `cargo install cargo-tarpaulin` and use
+To run tests with measuring coverage, install [`tarpaulin`](https://github.com/xd009642/tarpaulin) via `cargo install cargo-tarpaulin` and use
 
 ```bash
 cargo tarpaulin --out Html

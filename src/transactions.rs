@@ -8,7 +8,7 @@ pub use ethnum::U256;
 use secp256k1::ecdsa::{RecoverableSignature, RecoveryId};
 use secp256k1::{Message, PublicKey, Secp256k1};
 
-fn lstrip<S: AsRef<[u8]>>(bytes: S) -> Vec<u8> {
+pub(crate) fn lstrip<S: AsRef<[u8]>>(bytes: S) -> Vec<u8> {
     bytes
         .as_ref()
         .iter()
@@ -37,7 +37,7 @@ pub struct Transaction {
     /// Hash of transaction on which current transaction depends.
     ///
     /// May be left unspecified if this functionality is not necessary.
-    pub depends_on: Option<[u8; 32]>,
+    pub depends_on: Option<U256>,
     /// Transaction nonce
     pub nonce: u64,
     /// Reserved fields.
@@ -69,7 +69,7 @@ impl Encodable for InternalTransaction {
         self.0.gas_price_coef.encode(out);
         self.0.gas.encode(out);
         if let Some(a) = self.0.depends_on.as_ref() {
-            Bytes::copy_from_slice(a).encode(out)
+            Bytes::copy_from_slice(&a.to_be_bytes()).encode(out)
         } else {
             Bytes::new().encode(out);
         }
@@ -99,23 +99,21 @@ impl Decodable for InternalTransaction {
                 if binary.is_empty() {
                     None
                 } else {
-                    Some(binary.to_vec().try_into().map_err(|_| {
-                        alloy_rlp::Error::ListLengthMismatch {
+                    Some(U256::from_be_bytes(static_left_pad(&binary).map_err(
+                        |_| alloy_rlp::Error::ListLengthMismatch {
                             expected: 32,
                             got: binary.len(),
-                        }
-                    })?)
+                        },
+                    )?))
                 }
             },
             nonce: u64::decode(buf)?,
             reserved: {
-                let binary = Vec::<Bytes>::decode(buf)?;
-                let mut temp_buf = vec![];
-                binary.encode(&mut temp_buf);
-                if binary.is_empty() {
+                let reserved = Reserved::decode(buf)?;
+                if reserved.is_empty() {
                     None
                 } else {
-                    Some(Reserved::decode(&mut &temp_buf[..])?)
+                    Some(reserved)
                 }
             },
             signature: {
@@ -323,6 +321,34 @@ impl Transaction {
         //! of two signatures.
         self.signature.clone()
     }
+
+    pub fn has_valid_signature(&self) -> bool {
+        //! Check wheter the signature is valid.
+        self._has_valid_signature().unwrap_or(false)
+    }
+
+    fn _has_valid_signature(&self) -> Result<bool, secp256k1::Error> {
+        //! Check wheter the signature is valid.
+        if !self.signature_length_valid() {
+            return Ok(false);
+        }
+        match &self.signature {
+            None => Ok(false),
+            Some(signature) => {
+                let hash = self.get_signing_hash();
+                let secp = Secp256k1::verification_only();
+                Ok(secp
+                    .recover_ecdsa(
+                        &Message::from_slice(&hash)?,
+                        &RecoverableSignature::from_compact(
+                            &signature[..64],
+                            RecoveryId::from_i32(signature[64] as i32)?,
+                        )?,
+                    )
+                    .is_ok())
+            }
+        }
+    }
 }
 
 /// Represents a single transaction clause (recipient, value and data).
@@ -358,7 +384,7 @@ impl Encodable for InternalClause {
         if let Some(a) = self.0.to {
             a.encode(out)
         } else {
-            b"".encode(out);
+            Bytes::new().encode(out);
         }
 
         let value = lstrip(self.0.value.to_be_bytes());
@@ -369,24 +395,20 @@ impl Encodable for InternalClause {
 }
 impl Decodable for InternalClause {
     fn decode(buf: &mut &[u8]) -> Result<Self, alloy_rlp::Error> {
-        let address = Bytes::decode(buf)?;
-        let address: Option<Address> =
-            if address.is_empty() {
-                None
-            } else {
-                Some(address.to_vec().try_into().map_err(|_| {
-                    alloy_rlp::Error::ListLengthMismatch {
-                        expected: 20,
-                        got: address.len(),
-                    }
-                })?)
-            };
-        let value = U256::from_be_bytes(static_left_pad(&Bytes::decode(buf)?)?);
-        let data = Bytes::decode(buf)?;
         Ok(Self(Clause {
-            to: address,
-            value,
-            data,
+            to: {
+                let address = Address::decode(buf)?;
+                if address.to_bytes().iter().all(|&c| c == 0) {
+                    // None is zero address (contract creation). It is not
+                    // distinguishable from real [0; 20] address by design:
+                    // null address is a really existing one, parent of contracts.
+                    None
+                } else {
+                    Some(address)
+                }
+            },
+            value: U256::from_be_bytes(static_left_pad(&Bytes::decode(buf)?)?),
+            data: Bytes::decode(buf)?,
         }))
     }
 }
@@ -485,6 +507,10 @@ impl Reserved {
     pub fn is_delegated(&self) -> bool {
         //! Belongs to delegated transaction?
         self.features & Self::DELEGATED_BIT != 0
+    }
+    pub fn is_empty(&self) -> bool {
+        //! Belongs to delegated transaction?
+        self.features == 0 && self.unused.is_empty()
     }
 }
 
@@ -585,6 +611,29 @@ mod test {
             Transaction::decode(&mut &buf[..]).expect("Must be decodable"),
             tx
         );
+        assert!(!tx.has_valid_signature());
+    }
+
+    #[test]
+    fn test_rlp_encode_basic_contract() {
+        let tx = Transaction {
+            clauses: vec![Clause {
+                to: None,
+                value: U256::new(0),
+                data: b"\x12\x34".to_vec().into(),
+            }],
+            ..undelegated_tx!()
+        };
+        let expected = decode_hex("d90184aabbccdd20c6c5808082123481808252088083bc614ec0").unwrap();
+        let mut buf = vec![];
+        tx.encode(&mut buf);
+        buf.iter().for_each(|c| print!("{:02x?}", c));
+        println!();
+        assert_eq!(buf, expected);
+        assert_eq!(
+            Transaction::decode(&mut &buf[..]).expect("Must be decodable"),
+            tx
+        );
     }
 
     #[test]
@@ -600,6 +649,7 @@ mod test {
             Transaction::decode(&mut &buf[..]).expect("Must be decodable"),
             tx
         );
+        assert!(!tx.has_valid_signature());
     }
 
     #[test]
@@ -637,23 +687,30 @@ mod test {
             reserved: None,
             ..undelegated_tx!()
         };
+        let tx_delegated = Transaction {
+            reserved: Some(Reserved::new_delegated()),
+            ..undelegated_tx!()
+        };
         let mut buf = vec![];
         tx.encode(&mut buf);
         let mut buf2 = vec![];
         tx2.encode(&mut buf2);
         assert_eq!(buf, buf2);
+        let mut buf3 = vec![];
+        tx_delegated.encode(&mut buf3);
+        assert_ne!(buf, buf3);
     }
 
     #[test]
     fn test_rlp_encode_depends_on() {
         // Verified on-chain after signing.
         let tx = Transaction {
-            depends_on: Some(
+            depends_on: Some(U256::from_be_bytes(
                 decode_hex("360341090d2c4a01fa7da816c57d51c0b2fa3fcf1f99141806efc99f568c0b2a")
                     .unwrap()
                     .try_into()
                     .unwrap(),
-            ),
+            )),
             ..undelegated_tx!()
         };
         let mut buf = vec![];
@@ -669,13 +726,13 @@ mod test {
 
     #[test]
     fn test_rlp_encode_depends_on_malformed() {
-        // Manually crafted: here depends_on is 31 bytes long.
-        let malformed = decode_hex("f8730184aabbccdd20f840df947567d83b7b8d80addcb281a71d54fc7b3364ffed82271086000000606060df947567d83b7b8d80addcb281a71d54fc7b3364ffed824e208600000060606081808252089f3603090d2c4a01fa7da816c57d51c0b2fa3fcf1f99141806efc99f568c0b2a83bc614ec0").unwrap();
+        // Manually crafted: here depends_on is 33 bytes long.
+        let malformed = decode_hex("f8750184aabbccdd20f840df947567d83b7b8d80addcb281a71d54fc7b3364ffed82271086000000606060df947567d83b7b8d80addcb281a71d54fc7b3364ffed824e20860000006060608180825208a136034141090d2c4a01fa7da816c57d51c0b2fa3fcf1f99141806efc99f568c0b2a83bc614ec0").unwrap();
         assert_eq!(
             Transaction::decode(&mut &malformed[..]).unwrap_err(),
             alloy_rlp::Error::ListLengthMismatch {
                 expected: 32,
-                got: 31
+                got: 33
             }
         );
     }
@@ -744,6 +801,7 @@ mod test {
             Transaction::decode(&mut &buf[..]).expect("Must be decodable"),
             signed
         );
+        assert!(signed.has_valid_signature());
     }
 
     #[test]
@@ -775,6 +833,7 @@ mod test {
             Transaction::decode(&mut &buf[..]).expect("Must be decodable"),
             tx
         );
+        assert!(tx.has_valid_signature());
     }
 
     #[test]
@@ -814,18 +873,6 @@ mod test {
         assert_eq!(tx.signature, None);
         assert_eq!(tx.id(), Ok(None));
         assert_eq!(tx.origin(), Ok(None));
-        assert_eq!(tx.delegator(), Ok(None));
-    }
-
-    #[test]
-    fn test_undelegated_malformed_signature_properties() {
-        let tx = Transaction {
-            signature: Some(Bytes::copy_from_slice(b"\x01\x02\x03")),
-            ..undelegated_tx!()
-        };
-        assert!(!tx.is_delegated());
-        assert_eq!(tx.id(), Err(secp256k1::Error::IncorrectSignature));
-        assert_eq!(tx.origin(), Err(secp256k1::Error::IncorrectSignature));
         assert_eq!(tx.delegator(), Ok(None));
     }
 
@@ -881,6 +928,82 @@ mod test {
     }
 
     #[test]
+    fn test_rlp_decode_address_too_long() {
+        let malformed = decode_hex(
+            "ec0184aabbccdd20d8d795515167d83b7b8d80addcb281a71d54fc7b3364ffed808081808252088083bc614ec0"
+        ).unwrap();
+        assert_eq!(
+            Transaction::decode(&mut &malformed[..]).unwrap_err(),
+            alloy_rlp::Error::ListLengthMismatch {
+                expected: 20,
+                got: 21
+            }
+        );
+    }
+
+    #[test]
+    fn test_rlp_decode_address_startswith_zero_misencoded() {
+        let malformed = decode_hex(
+            "eb0184aabbccdd20d8d7940067d83b7b8d80addcb281a71d54fc7b3364ffed808081808252088083bc614ec0"
+        ).unwrap();
+        assert_eq!(
+            Transaction::decode(&mut &malformed[..]).unwrap_err(),
+            alloy_rlp::Error::LeadingZero
+        );
+    }
+
+    #[test]
+    fn test_rlp_decode_address_shorter() {
+        // TODO: test on chain
+        let tx = Transaction {
+            clauses: vec![Clause {
+                to: Some(
+                    "0x0067d83b7b8d80addcb281a71d54fc7b3364ffed"
+                        .parse()
+                        .unwrap(),
+                ),
+                value: U256::new(0),
+                data: Bytes::new(),
+            }],
+            ..undelegated_tx!()
+        };
+        let tx_full = Transaction {
+            clauses: vec![Clause {
+                to: Some(
+                    "0x5167d83b7b8d80addcb281a71d54fc7b3364ffed"
+                        .parse()
+                        .unwrap(),
+                ),
+                value: U256::new(0),
+                data: Bytes::new(),
+            }],
+            ..undelegated_tx!()
+        };
+        let mut buf = vec![];
+        tx.encode(&mut buf);
+        assert_eq!(
+            Transaction::decode(&mut &buf[..]).expect("Must be decodable"),
+            tx
+        );
+
+        let mut buf_full = vec![];
+        tx_full.encode(&mut buf_full);
+        assert_eq!(buf_full.len(), buf.len() + 1);
+    }
+
+    #[test]
+    fn test_undelegated_malformed_signature_properties() {
+        let tx = Transaction {
+            signature: Some(Bytes::copy_from_slice(b"\x01\x02\x03")),
+            ..undelegated_tx!()
+        };
+        assert!(!tx.is_delegated());
+        assert_eq!(tx.id(), Err(secp256k1::Error::IncorrectSignature));
+        assert_eq!(tx.origin(), Err(secp256k1::Error::IncorrectSignature));
+        assert_eq!(tx.delegator(), Ok(None));
+    }
+
+    #[test]
     fn test_undelegated_malformed_signature_2_properties() {
         let tx = Transaction {
             signature: Some(Bytes::copy_from_slice(&(0..65).collect::<Vec<_>>())),
@@ -890,6 +1013,7 @@ mod test {
         assert_eq!(tx.id(), Err(secp256k1::Error::InvalidRecoveryId));
         assert_eq!(tx.origin(), Err(secp256k1::Error::InvalidRecoveryId));
         assert_eq!(tx.delegator(), Ok(None));
+        assert!(!tx.has_valid_signature());
     }
 
     #[test]
@@ -902,6 +1026,7 @@ mod test {
         assert_eq!(tx.id(), Err(secp256k1::Error::IncorrectSignature));
         assert_eq!(tx.origin(), Err(secp256k1::Error::IncorrectSignature));
         assert_eq!(tx.delegator(), Err(secp256k1::Error::IncorrectSignature));
+        assert!(!tx.has_valid_signature());
     }
 
     #[test]

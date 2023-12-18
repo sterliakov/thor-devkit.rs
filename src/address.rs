@@ -1,6 +1,6 @@
 //! VeChain address operations and verifications.
 
-use alloy_rlp::{RlpDecodableWrapper, RlpEncodableWrapper};
+use alloy_rlp::{Decodable, Encodable};
 pub use secp256k1::{PublicKey, SecretKey as PrivateKey};
 use std::fmt;
 use std::result::Result;
@@ -25,8 +25,8 @@ pub(crate) fn decode_hex(s: &str) -> Result<Vec<u8>, AddressValidationError> {
 }
 
 /// Represents VeChain address
-#[derive(Eq, PartialEq, Clone, Copy, Debug, RlpDecodableWrapper, RlpEncodableWrapper)]
-pub struct Address([u8; 20]);
+#[derive(Eq, PartialEq, Clone, Copy, Debug)]
+pub struct Address([u8; Address::WIDTH]);
 
 impl FromStr for Address {
     type Err = AddressValidationError;
@@ -36,14 +36,19 @@ impl FromStr for Address {
         addr.try_into()
     }
 }
+impl From<[u8; Address::WIDTH]> for Address {
+    fn from(value: [u8; Address::WIDTH]) -> Self {
+        Self(value)
+    }
+}
 impl TryFrom<&[u8]> for Address {
     type Error = AddressValidationError;
 
     fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
-        let addr: [u8; 20] = value
+        let addr: [u8; Self::WIDTH] = value
             .try_into()
             .map_err(|_| AddressValidationError::InvalidLength {})?;
-        Ok(Address(addr))
+        Ok(Self(addr))
     }
 }
 impl TryFrom<Vec<u8>> for Address {
@@ -63,7 +68,30 @@ impl fmt::Display for Address {
     }
 }
 
+impl Encodable for Address {
+    fn encode(&self, out: &mut dyn alloy_rlp::BufMut) {
+        use crate::transactions::lstrip;
+        alloy_rlp::Bytes::copy_from_slice(&lstrip(self.0)).encode(out)
+    }
+}
+impl Decodable for Address {
+    fn decode(buf: &mut &[u8]) -> Result<Self, alloy_rlp::Error> {
+        use crate::transactions::static_left_pad;
+        let bytes = alloy_rlp::Bytes::decode(buf)?;
+        Ok(Self(static_left_pad(&bytes).map_err(|e| match e {
+            alloy_rlp::Error::Overflow => alloy_rlp::Error::ListLengthMismatch {
+                expected: Self::WIDTH,
+                got: bytes.len(),
+            },
+            e => e,
+        })?))
+    }
+}
+
 impl Address {
+    /// Size of underlying array in bytes.
+    pub const WIDTH: usize = 20;
+
     pub fn to_checksum_address(&self) -> String {
         //! Create a checksum address
 
@@ -86,7 +114,7 @@ impl Address {
             .collect()
     }
     /// Get raw underlying bytes
-    pub fn to_bytes(self) -> [u8; 20] {
+    pub fn to_bytes(self) -> [u8; Self::WIDTH] {
         self.0
     }
 }
@@ -145,6 +173,12 @@ mod tests {
     }
 
     #[test]
+    fn test_from_zeroes() {
+        let buf = [0u8; 20];
+        assert_eq!(Address::from(buf), Address(buf));
+    }
+
+    #[test]
     fn test_to_checksum_address() {
         let addresses = vec![
             "0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed",
@@ -153,9 +187,18 @@ mod tests {
             "0xD1220A0cf47c7B9Be7A2E6BA89F429762e7b9aDb",
         ];
 
-        addresses.into_iter().for_each(|addr| {
+        addresses.iter().for_each(|&addr| {
             assert_eq!(addr, addr.parse::<Address>().unwrap().to_checksum_address());
-        })
+        });
+        addresses.iter().for_each(|&addr| {
+            assert_eq!(
+                addr,
+                addr.to_lowercase()
+                    .parse::<Address>()
+                    .unwrap()
+                    .to_checksum_address()
+            );
+        });
     }
 
     #[test]
