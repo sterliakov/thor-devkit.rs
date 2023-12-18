@@ -55,7 +55,7 @@ impl TryFrom<Vec<u8>> for Address {
     type Error = AddressValidationError;
 
     fn try_from(value: Vec<u8>) -> Result<Self, Self::Error> {
-        value.as_slice().try_into()
+        value[..].try_into()
     }
 }
 impl fmt::Display for Address {
