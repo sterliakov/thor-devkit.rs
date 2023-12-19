@@ -4,7 +4,7 @@ use crate::address::{Address, AddressConvertible, PrivateKey};
 use crate::utils::blake2_256;
 pub use alloy_rlp::Bytes;
 use alloy_rlp::{Buf, BufMut, Decodable, Encodable, RlpDecodable, RlpEncodable};
-pub use ethnum::U256;
+use ethereum_types::U256;
 use secp256k1::ecdsa::{RecoverableSignature, RecoveryId};
 use secp256k1::{Message, PublicKey, Secp256k1};
 
@@ -69,7 +69,9 @@ impl Encodable for InternalTransaction {
         self.0.gas_price_coef.encode(out);
         self.0.gas.encode(out);
         if let Some(a) = self.0.depends_on.as_ref() {
-            Bytes::copy_from_slice(&a.to_be_bytes()).encode(out)
+            let mut buf = [0; 32];
+            a.to_big_endian(&mut buf);
+            Bytes::copy_from_slice(&buf).encode(out)
         } else {
             Bytes::new().encode(out);
         }
@@ -99,12 +101,14 @@ impl Decodable for InternalTransaction {
                 if binary.is_empty() {
                     None
                 } else {
-                    Some(U256::from_be_bytes(static_left_pad(&binary).map_err(
-                        |_| alloy_rlp::Error::ListLengthMismatch {
-                            expected: 32,
-                            got: binary.len(),
-                        },
-                    )?))
+                    Some(U256::from_big_endian(
+                        &static_left_pad::<32>(&binary).map_err(|_| {
+                            alloy_rlp::Error::ListLengthMismatch {
+                                expected: 32,
+                                got: binary.len(),
+                            }
+                        })?,
+                    ))
                 }
             },
             nonce: u64::decode(buf)?,
@@ -387,7 +391,11 @@ impl Encodable for InternalClause {
             Bytes::new().encode(out);
         }
 
-        let value = lstrip(self.0.value.to_be_bytes());
+        let value = {
+            let mut buf = [0; 32];
+            self.0.value.to_big_endian(&mut buf);
+            lstrip(buf)
+        };
         Bytes::from(value).encode(out);
 
         self.0.data.encode(out);
@@ -407,7 +415,7 @@ impl Decodable for InternalClause {
                     Some(address)
                 }
             },
-            value: U256::from_be_bytes(static_left_pad(&Bytes::decode(buf)?)?),
+            value: U256::from_big_endian(&static_left_pad::<32>(&Bytes::decode(buf)?)?),
             data: Bytes::decode(buf)?,
         }))
     }
@@ -563,7 +571,7 @@ mod test {
                                 .parse()
                                 .unwrap(),
                         ),
-                        value: U256::new(10000),
+                        value: 10000.into(),
                         data: b"\x00\x00\x00\x60\x60\x60".to_vec().into(),
                     },
                     Clause {
@@ -572,7 +580,7 @@ mod test {
                                 .parse()
                                 .unwrap(),
                         ),
-                        value: U256::new(20000),
+                        value: 20000.into(),
                         data: b"\x00\x00\x00\x60\x60\x60".to_vec().into(),
                     },
                 ],
@@ -619,7 +627,7 @@ mod test {
         let tx = Transaction {
             clauses: vec![Clause {
                 to: None,
-                value: U256::new(0),
+                value: 0.into(),
                 data: b"\x12\x34".to_vec().into(),
             }],
             ..undelegated_tx!()
@@ -705,10 +713,8 @@ mod test {
     fn test_rlp_encode_depends_on() {
         // Verified on-chain after signing.
         let tx = Transaction {
-            depends_on: Some(U256::from_be_bytes(
-                decode_hex("360341090d2c4a01fa7da816c57d51c0b2fa3fcf1f99141806efc99f568c0b2a")
-                    .unwrap()
-                    .try_into()
+            depends_on: Some(U256::from_big_endian(
+                &decode_hex("360341090d2c4a01fa7da816c57d51c0b2fa3fcf1f99141806efc99f568c0b2a")
                     .unwrap(),
             )),
             ..undelegated_tx!()
@@ -962,7 +968,7 @@ mod test {
                         .parse()
                         .unwrap(),
                 ),
-                value: U256::new(0),
+                value: 0.into(),
                 data: Bytes::new(),
             }],
             ..undelegated_tx!()
@@ -974,7 +980,7 @@ mod test {
                         .parse()
                         .unwrap(),
                 ),
-                value: U256::new(0),
+                value: 0.into(),
                 data: Bytes::new(),
             }],
             ..undelegated_tx!()
@@ -1073,7 +1079,7 @@ mod test {
         let tx = Transaction {
             clauses: vec![Clause {
                 to: None,
-                value: U256::new(0),
+                value: 0.into(),
                 data: Bytes::new(),
             }],
             ..undelegated_tx!()
