@@ -11,6 +11,7 @@ use std::{
 };
 
 #[cfg(test)]
+#[cfg(not(tarpaulin_include))]
 pub(crate) fn decode_hex(s: &str) -> Result<Vec<u8>, AddressValidationError> {
     //! Convert a hex string (with or without 0x prefix) to binary.
     let prefix = if s.starts_with("0x") { 2 } else { 0 };
@@ -151,6 +152,11 @@ mod tests {
                 .unwrap();
         let ref_addr: Address = "Af3CD5c36B97E9c28c263dC4639c6d7d53303A13".parse().unwrap();
         assert_eq!(pubkey.address(), ref_addr);
+    }
+
+    #[test]
+    fn test_can_create_from_raw() {
+        let _ = Address::from([0; 20]);
     }
 
     #[test]

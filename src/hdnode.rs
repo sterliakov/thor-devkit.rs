@@ -61,6 +61,27 @@ impl HDNode {
             Restricted(pubkey) => pubkey.attrs().chain_code,
         }
     }
+    pub fn parent_fingerprint(&self) -> [u8; 4] {
+        //! Get underlying chain code.
+        match &self.0 {
+            Full(privkey) => privkey.attrs().parent_fingerprint,
+            Restricted(pubkey) => pubkey.attrs().parent_fingerprint,
+        }
+    }
+    pub fn child_number(&self) -> ChildNumber {
+        //! Get underlying chain code.
+        match &self.0 {
+            Full(privkey) => privkey.attrs().child_number,
+            Restricted(pubkey) => pubkey.attrs().child_number,
+        }
+    }
+    pub fn depth(&self) -> u8 {
+        //! Get underlying chain code.
+        match &self.0 {
+            Full(privkey) => privkey.attrs().depth,
+            Restricted(pubkey) => pubkey.attrs().depth,
+        }
+    }
     pub fn address(self) -> crate::address::Address {
         //! Get the address of current node.
         use crate::address::AddressConvertible;
@@ -87,6 +108,7 @@ pub enum HDNodeError {
     Custom(String),
 }
 
+#[cfg(not(tarpaulin_include))]
 impl std::fmt::Display for HDNodeError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -105,6 +127,7 @@ impl std::fmt::Display for HDNodeError {
 }
 impl std::error::Error for HDNodeError {}
 
+#[cfg(not(tarpaulin_include))]
 impl From<bip32::Error> for HDNodeError {
     fn from(err: bip32::Error) -> HDNodeError {
         match err {
@@ -157,9 +180,9 @@ impl<'a> HDNodeBuilder<'a> {
         self
     }
 
-    pub fn master_private_key_bytes<S: Into<[u8; 33]>, T: Into<ChainCode>>(
+    pub fn master_private_key_bytes<T: Into<ChainCode>>(
         mut self,
-        key: S,
+        key: [u8; 33],
         chain_code: T,
     ) -> Self {
         //! Create an HDNode from private key bytes and chain code.
@@ -171,7 +194,7 @@ impl<'a> HDNodeBuilder<'a> {
                 child_number: ChildNumber(0u32),
                 chain_code: chain_code.into(),
             },
-            key_bytes: key.into(),
+            key_bytes: key,
         });
         self
     }
@@ -181,9 +204,9 @@ impl<'a> HDNodeBuilder<'a> {
         self
     }
 
-    pub fn master_public_key_bytes<S: Into<[u8; 33]>, T: Into<ChainCode>>(
+    pub fn master_public_key_bytes<T: Into<ChainCode>>(
         mut self,
-        key: S,
+        key: [u8; 33],
         chain_code: T,
     ) -> Self {
         //! Create an HDNode from private key bytes and chain code.
@@ -197,7 +220,7 @@ impl<'a> HDNodeBuilder<'a> {
                 child_number: ChildNumber(0u32),
                 chain_code: chain_code.into(),
             },
-            key_bytes: key.into(),
+            key_bytes: key,
         });
         self
     }
@@ -211,20 +234,27 @@ impl<'a> HDNodeBuilder<'a> {
 
     pub fn build(self) -> Result<HDNode, HDNodeError> {
         //! Create an HDNode from given arguments.
-        let path = self.path.unwrap_or_else(|| {
-            VET_EXTERNAL_PATH
-                .parse()
-                .expect("hardcoded path must be valid")
-        });
         match (self.seed, self.mnemonic, self.ext_privkey, self.ext_pubkey) {
             (Some(seed), None, None, None) => {
+                let path = self.path.unwrap_or_else(|| {
+                    VET_EXTERNAL_PATH
+                        .parse()
+                        .expect("hardcoded path must be valid")
+                });
                 Ok(ExtendedPrivateKey::derive_from_path(seed, &path).map(|k| HDNode(Full(k)))?)
             }
-            (None, Some(mnemonic), None, None) => Ok(ExtendedPrivateKey::derive_from_path(
-                bip39::Seed::new(&mnemonic, self.password.unwrap_or("")),
-                &path,
-            )
-            .map(|k| HDNode(Full(k)))?),
+            (None, Some(mnemonic), None, None) => {
+                let path = self.path.unwrap_or_else(|| {
+                    VET_EXTERNAL_PATH
+                        .parse()
+                        .expect("hardcoded path must be valid")
+                });
+                Ok(ExtendedPrivateKey::derive_from_path(
+                    bip39::Seed::new(&mnemonic, self.password.unwrap_or("")),
+                    &path,
+                )
+                .map(|k| HDNode(Full(k)))?)
+            }
             (None, None, Some(ext_key), None) => Ok(HDNode(Full(ext_key.try_into()?))),
             (None, None, None, Some(ext_key)) => Ok(HDNode(Restricted(ext_key.try_into()?))),
             (None, None, None, None) => Err(HDNodeError::Unbuildable(
@@ -281,7 +311,7 @@ mod test {
         let private = "e4a2687ec443f4d23b6ba9e7d904a31acdda90032b34aa0e642e6dd3fd36f682";
         let public = "04dc40b4324626eb393dbf77b6930e915dcca6297b42508adb743674a8ad5c69a046010f801a62cb945a6cb137a050cefaba0572429fc4afc57df825bfca2f219a";
         let chain_code = "105da5578eb3228655a8abe70bf4c317e525c7f7bb333634f5b7d1f70e111a33";
-        let node = HDNode::build().mnemonic(mnemonic).build().unwrap();
+        let node = HDNode::build().mnemonic(mnemonic.clone()).build().unwrap();
         assert_eq!(
             node.private_key()
                 .unwrap()
@@ -304,6 +334,11 @@ mod test {
             decode_hex(chain_code).unwrap(),
             "Chain code differs"
         );
+        let same_node = HDNode::build()
+            .mnemonic_with_password(mnemonic, "")
+            .build()
+            .unwrap();
+        assert_eq!(node, same_node);
 
         let addresses = vec![
             "0x339Fb3C438606519E2C75bbf531fb43a0F449A70",
@@ -320,7 +355,34 @@ mod test {
                     .to_checksum_address(),
                 addr
             );
-        })
+        });
+
+        let paired_public_node = HDNode::build()
+            .public_key(ExtendedKey {
+                prefix: Prefix::XPUB,
+                attrs: ExtendedKeyAttrs {
+                    depth: node.depth(),
+                    parent_fingerprint: node.parent_fingerprint(),
+                    child_number: node.child_number(),
+                    chain_code: node.chain_code(),
+                },
+                key_bytes: node.public_key().to_bytes(),
+            })
+            .build()
+            .expect("Must be buildable");
+        assert_eq!(
+            paired_public_node.private_key().unwrap_err(),
+            HDNodeError::Crypto
+        );
+        assert_eq!(paired_public_node.public_key(), node.public_key());
+        assert_eq!(paired_public_node.chain_code(), node.chain_code());
+        assert_eq!(paired_public_node.depth(), node.depth());
+        assert_eq!(
+            paired_public_node.parent_fingerprint(),
+            node.parent_fingerprint()
+        );
+        assert_eq!(paired_public_node.child_number(), node.child_number());
+        assert_eq!(paired_public_node.address(), node.address());
     }
 
     #[test]
@@ -436,5 +498,65 @@ mod test {
             derived.public_key().to_string(Prefix::XPUB).as_str(),
             "xpub6FnCn6nSzZAw5Tw7cgR9bi15UV96gLZhjDstkXXxvCLsUXBGXPdSnLFbdpq8p9HmGsApME5hQTZ3emM2rnY5agb9rXpVGyy3bdW6EEgAtqt"
         );
+    }
+
+    #[test]
+    fn test_build() {
+        let mnemonic = bip39::Mnemonic::from_phrase(
+            "ignore empty bird silly journey junior ripple have guard waste between tenant",
+            bip39::Language::English,
+        )
+        .unwrap();
+
+        assert_eq!(
+            HDNode::build().build().expect_err("Must fail"),
+            HDNodeError::Unbuildable("no parameters provided".to_string())
+        );
+        assert_eq!(
+            HDNode::build()
+                .seed([0; 64])
+                .master_private_key_bytes([0; 33], [0; 32])
+                .build()
+                .expect_err("Must fail"),
+            HDNodeError::Unbuildable("incompatible parameters".to_string())
+        );
+        HDNode::build()
+            .seed([0; 64])
+            .build()
+            .expect("Must be buildable");
+        HDNode::build()
+            .path("m/0/12'".parse().unwrap())
+            .seed([0; 64])
+            .build()
+            .expect("Must be buildable");
+        HDNode::build()
+            .mnemonic(mnemonic.clone())
+            .build()
+            .expect("Must be buildable");
+        HDNode::build()
+            .path("m/0".parse().unwrap())
+            .mnemonic(mnemonic.clone())
+            .build()
+            .expect("Must be buildable");
+        HDNode::build()
+            .master_private_key_bytes(
+                decode_hex("00e4a2687ec443f4d23b6ba9e7d904a31acdda90032b34aa0e642e6dd3fd36f682")
+                    .unwrap()
+                    .try_into()
+                    .unwrap(),
+                [0; 32],
+            )
+            .build()
+            .expect("Must be buildable");
+        HDNode::build()
+            .master_public_key_bytes(
+                decode_hex("035A784662A4A20A65BF6AAB9AE98A6C068A81C52E4B032C0FB5400C706CFCCC56")
+                    .unwrap()
+                    .try_into()
+                    .unwrap(),
+                [0; 32],
+            )
+            .build()
+            .expect("Must be buildable");
     }
 }
