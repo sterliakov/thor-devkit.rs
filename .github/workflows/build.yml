@@ -12,18 +12,13 @@ jobs:
     name: Build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - name: Stable with rustfmt and clippy
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@stable
         with:
-          profile: minimal
-          toolchain: stable
           components: rustfmt, clippy
       - name: Release build
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: --release --all-features
+        run: cargo build --release --all-features
       - uses: giraffate/clippy-action@v1
         with:
           reporter: 'github-pr-review'
