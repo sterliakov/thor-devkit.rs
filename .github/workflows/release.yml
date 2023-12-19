@@ -5,7 +5,7 @@ on:
     tags: [ 'v*' ]
 
 jobs:
-  release:
+  release-github:
     name: Publish to GitHub releases
     runs-on: ubuntu-latest
     permissions:
@@ -30,6 +30,11 @@ jobs:
           generate_release_notes: true
           body: ${{ fromJson(steps.vars.outputs.changelog) }}
 
+  release-crate:
+    name: Publish to crates.io
+    runs-on: ubuntu-latest
+    if: "startsWith(github.ref, 'refs/tags/')"
+    steps:
       - name: Publish crate to crates.io
         run: |
           name=$(cargo metadata -q --no-deps | jq -r '.packages[0].name')
