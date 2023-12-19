@@ -36,6 +36,7 @@ rustc-hex = "2.1.0"
 [dev-dependencies]
 # version_sync: to ensure versions in `Cargo.toml` and `README.md` are in sync
 version-sync = "0.9.4"
+
 # cargo-bump: to bump package version and tag a commit at the same time.
 # actually, the docs recommend installing this globally:
 #   $ git clone https://github.com/rnag/cargo-bump && cd cargo-bump && cargo install --path . && cd .. && rm -rf cargo-bump
