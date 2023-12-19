@@ -26,7 +26,6 @@ jobs:
         uses: dtolnay/install@master
         with:
           crate: cargo-tarpaulin
-          version: latest
 
       - name: Run tests with coverage
         run: RUST_BACKTRACE=1 cargo tarpaulin --out Xml
