@@ -6,10 +6,8 @@ description = "Rust library to aid coding with VeChain, eg. Wallets/Tx/Sign/Veri
 documentation = "https://docs.rs/thor-devkit.rs"
 repository = "https://github.com/sterliakov/thor-devkit.rs"
 readme = "README.md"
-keywords = ["thor-devkit.rs"]
-categories = [
-    # "api-bindings"
-]
+keywords = ["vechain", "crypto", "blockchain", "cryptography", "parsing", "serialization", "hash"]
+categories = ["cryptography"]
 license = "GPL-3.0"
 edition = "2021"
 
