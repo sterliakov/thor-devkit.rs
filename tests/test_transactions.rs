@@ -75,6 +75,10 @@ fn test_rlp_encode_basic() {
         tx
     );
     assert!(!tx.has_valid_signature());
+    assert_eq!(
+        tx.to_broadcastable_bytes().expect_err("Unsigned"),
+        secp256k1::Error::IncorrectSignature
+    );
 }
 
 #[test]
@@ -349,8 +353,7 @@ fn test_with_signature_validated() {
 fn test_decode_real() {
     let src = decode_hex("f8804a880106f4db1482fd5a81b4e1e09477845a52acad7fe6a346f5b09e5e89e7caec8e3b890391c64cd2bc206c008080828ca08088a63565b632b9b7c3c0b841d76de99625a1a8795e467d509818701ec5961a8a4cf7cc2d75cee95f9ad70891013aaa4088919cc46df4f1e3f87b4ea44d002033fa3f7bd69485cb807aa2985100").unwrap();
     let tx = Transaction::decode(&mut &src[..]).unwrap();
-    let mut buf = vec![];
-    tx.encode(&mut buf);
+    let buf = tx.to_broadcastable_bytes().expect("Was signed");
     assert_eq!(buf, src);
 }
 
