@@ -22,11 +22,14 @@ jobs:
           toolchain: stable
           override: true
 
-      - name: Run cargo-tarpaulin
-        uses: actions-rs/tarpaulin@v0.1
+      - name: Install tarpaulin
+        uses: actions-rs/install@v0.1
         with:
-          version: '0.27.2'
-          args: '-- --test-threads 1 --all-features'
+          crate: cargo-tarpaulin
+          version: latest
+
+      - name: Run tests with coverage
+        run: RUST_BACKTRACE=1 cargo tarpaulin
 
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v3
