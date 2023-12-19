@@ -21,10 +21,18 @@ jobs:
         run: |
           CHANGELOG=$(awk '/^## v/ {n=NR; i++}; i==1 {if (NR==n) {print "## Release Notes"} else {print}}; i>1 {exit}' CHANGELOG.md \
             | python3 -c 'import sys, json; print(json.dumps(sys.stdin.read()))')
-          echo "::set-output name=changelog::$CHANGELOG"
-      - name: Release
+          echo "changelog=$CHANGELOG" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub release
         uses: softprops/action-gh-release@v1
         with:
           prerelease: ${{ contains(github.ref, 'alpha') || contains(github.ref, 'beta') }}
           generate_release_notes: true
           body: ${{ fromJson(steps.vars.outputs.changelog) }}
+
+      - name: Publish crate to crates.io
+        run: |
+          name=$(cargo metadata -q --no-deps | jq -r '.packages[0].name')
+          version=$(cargo metadata -q --no-deps | jq -r '.packages[0].version')
+          echo "Publishing ${name}-${version}"
+          cargo publish --token ${{ secrets.CARGO_TOKEN }}
