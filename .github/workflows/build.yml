@@ -2,30 +2,24 @@ name: build
 on:
   push:
     branches:
-      - main
+      - master
   pull_request:
     branches:
-      - main
+      - master
 
 jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - name: Stable with rustfmt and clippy
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@stable
         with:
-          profile: minimal
-          toolchain: stable
           components: rustfmt, clippy
       - name: Release build
-        uses: actions-rs/cargo@v1
+        run: cargo build --release --all-features
+      - uses: giraffate/clippy-action@v1
         with:
-          command: build
-          args: --release --all-features
-      - name: Annotate commit with clippy warnings
-        uses: actions-rs/clippy-check@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          args: --all-features
+          reporter: 'github-pr-review'
+          github_token: ${{ secrets.GITHUB_TOKEN }}
