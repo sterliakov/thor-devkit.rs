@@ -11,7 +11,7 @@ jobs:
     if: "startsWith(github.ref, 'refs/tags/')"
     steps:
       - name: Check out repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           fetch-depth: 1
       - name: Set variables
@@ -23,7 +23,6 @@ jobs:
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-
           prerelease: ${{ contains(github.ref, 'alpha') || contains(github.ref, 'beta') }}
           generate_release_notes: true
           body: ${{ fromJson(steps.vars.outputs.changelog) }}
