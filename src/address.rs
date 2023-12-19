@@ -2,11 +2,15 @@
 
 use crate::utils::keccak;
 use alloy_rlp::{Decodable, Encodable};
+use ethereum_types::Address as WrappedAddress;
 pub use secp256k1::{PublicKey, SecretKey as PrivateKey};
-use std::fmt;
-use std::result::Result;
-use std::str::FromStr;
+use std::{
+    ops::{Deref, DerefMut},
+    result::Result,
+    str::FromStr,
+};
 
+#[cfg(test)]
 pub(crate) fn decode_hex(s: &str) -> Result<Vec<u8>, AddressValidationError> {
     //! Convert a hex string (with or without 0x prefix) to binary.
     let prefix = if s.starts_with("0x") { 2 } else { 0 };
@@ -24,50 +28,24 @@ pub(crate) fn decode_hex(s: &str) -> Result<Vec<u8>, AddressValidationError> {
         .collect()
 }
 
-/// Represents VeChain address
-#[derive(Eq, PartialEq, Clone, Copy, Debug)]
-pub struct Address([u8; Address::WIDTH]);
+/// VeChain address.
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct Address(WrappedAddress);
 
-impl FromStr for Address {
-    type Err = AddressValidationError;
+impl DerefMut for Address {
+    // type Target = WrappedAddress;
 
-    fn from_str(value: &str) -> Result<Self, Self::Err> {
-        let addr = decode_hex(value)?;
-        addr.try_into()
+    fn deref_mut(&mut self) -> &mut WrappedAddress {
+        &mut self.0
     }
 }
-impl From<[u8; Address::WIDTH]> for Address {
-    fn from(value: [u8; Address::WIDTH]) -> Self {
-        Self(value)
-    }
-}
-impl TryFrom<&[u8]> for Address {
-    type Error = AddressValidationError;
+impl Deref for Address {
+    type Target = WrappedAddress;
 
-    fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
-        let addr: [u8; Self::WIDTH] = value
-            .try_into()
-            .map_err(|_| AddressValidationError::InvalidLength {})?;
-        Ok(Self(addr))
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
 }
-impl TryFrom<Vec<u8>> for Address {
-    type Error = AddressValidationError;
-
-    fn try_from(value: Vec<u8>) -> Result<Self, Self::Error> {
-        value[..].try_into()
-    }
-}
-impl fmt::Display for Address {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "0x")?;
-        for b in self.0 {
-            write!(f, "{:02x}", b)?;
-        }
-        Ok(())
-    }
-}
-
 impl Encodable for Address {
     fn encode(&self, out: &mut dyn alloy_rlp::BufMut) {
         use crate::transactions::lstrip;
@@ -78,13 +56,27 @@ impl Decodable for Address {
     fn decode(buf: &mut &[u8]) -> Result<Self, alloy_rlp::Error> {
         use crate::transactions::static_left_pad;
         let bytes = alloy_rlp::Bytes::decode(buf)?;
-        Ok(Self(static_left_pad(&bytes).map_err(|e| match e {
-            alloy_rlp::Error::Overflow => alloy_rlp::Error::ListLengthMismatch {
-                expected: Self::WIDTH,
-                got: bytes.len(),
-            },
-            e => e,
-        })?))
+        Ok(Self(WrappedAddress::from_slice(
+            &static_left_pad::<20>(&bytes).map_err(|e| match e {
+                alloy_rlp::Error::Overflow => alloy_rlp::Error::ListLengthMismatch {
+                    expected: Self::WIDTH,
+                    got: bytes.len(),
+                },
+                e => e,
+            })?,
+        )))
+    }
+}
+impl FromStr for Address {
+    type Err = rustc_hex::FromHexError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(Self(WrappedAddress::from_str(s)?))
+    }
+}
+impl<T: Into<WrappedAddress>> From<T> for Address {
+    fn from(s: T) -> Self {
+        Self(s.into())
     }
 }
 
@@ -95,8 +87,8 @@ impl Address {
     pub fn to_checksum_address(&self) -> String {
         //! Create a checksum address
 
-        let body = self.to_string();
-        let hash = keccak(&body.clone().into_bytes()[2..42]);
+        let body = format!("{:02x?}", self.0);
+        let hash = keccak(&body.clone()[2..42]);
 
         "0x".chars()
             .chain(
@@ -110,10 +102,6 @@ impl Address {
             )
             .collect()
     }
-    /// Get raw underlying bytes
-    pub fn to_bytes(self) -> [u8; Self::WIDTH] {
-        self.0
-    }
 }
 
 /// A trait for objects that can generate an on-chain address.
@@ -122,15 +110,14 @@ pub trait AddressConvertible {
     fn address(&self) -> Address;
 }
 
-// TODO: add VerifyingKey from the same crate
-
 impl AddressConvertible for secp256k1::PublicKey {
     fn address(&self) -> Address {
         //! Generate address from public key.
         // Get rid of the 0x04 (first byte) at the beginning.
         let hash = keccak(&self.serialize_uncompressed()[1..]);
         // last 20 bytes from the 32 bytes hash.
-        Address(hash[12..32].try_into().unwrap())
+        let suffix: [u8; 20] = hash[12..32].try_into().expect("Preset slice length");
+        Address(WrappedAddress::from_slice(&suffix))
     }
 }
 
@@ -145,7 +132,7 @@ pub enum AddressValidationError {
 
 #[cfg(test)]
 mod tests {
-    use crate::address::{Address, AddressConvertible, AddressValidationError, PublicKey};
+    use crate::address::*;
 
     #[test]
     fn test_upubkey_to_address() {
@@ -167,18 +154,13 @@ mod tests {
     }
 
     #[test]
-    fn test_from_zeroes() {
-        let buf = [0u8; 20];
-        assert_eq!(Address::from(buf), Address(buf));
-    }
-
-    #[test]
     fn test_to_checksum_address() {
         let addresses = vec![
             "0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed",
             "0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359",
             "0xdbF03B407c01E7cD3CBea99509d93f8DDDC8C6FB",
             "0xD1220A0cf47c7B9Be7A2E6BA89F429762e7b9aDb",
+            "0x00220a0cf47C7B9Be7a2e6ba89f429762e7B9adB",
         ];
 
         addresses.iter().for_each(|&addr| {
@@ -193,35 +175,5 @@ mod tests {
                     .to_checksum_address()
             );
         });
-    }
-
-    #[test]
-    fn test_invalid_address() {
-        assert_eq!(
-            AddressValidationError::InvalidLength,
-            "".parse::<Address>().unwrap_err()
-        );
-        assert_eq!(
-            AddressValidationError::InvalidLength,
-            "0x".parse::<Address>().unwrap_err()
-        );
-        assert_eq!(
-            AddressValidationError::InvalidLength,
-            "0xD1220A0cf47c7B9Be7A2E6BA89F429762e7b9aD"
-                .parse::<Address>()
-                .unwrap_err()
-        );
-        assert_eq!(
-            AddressValidationError::InvalidLength,
-            "0xD1220A0cf47c7B9Be7A2E6BA89F429762e7b9a"
-                .parse::<Address>()
-                .unwrap_err()
-        );
-        assert_eq!(
-            AddressValidationError::InvalidHex,
-            "0xD1220A0cf47c7B9Be7A2E6BA89F429762e7b9aGG"
-                .parse::<Address>()
-                .unwrap_err()
-        );
     }
 }

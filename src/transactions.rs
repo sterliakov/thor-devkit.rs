@@ -178,7 +178,7 @@ impl Transaction {
         without_signature.signature = None;
         without_signature.encode(&mut encoded);
         let main_hash = blake2_256(&[encoded]);
-        blake2_256(&[&main_hash[..], &delegate_for.to_bytes()[..]])
+        blake2_256(&[&main_hash[..], &delegate_for.to_fixed_bytes()[..]])
     }
 
     pub fn sign(self, private_key: &PrivateKey) -> Self {
@@ -311,7 +311,7 @@ impl Transaction {
             None => Ok(None),
             Some(origin) => Ok(Some(blake2_256(&[
                 &self.get_signing_hash()[..],
-                &origin.address().to_bytes()[..],
+                &origin.address().to_fixed_bytes()[..],
             ]))),
         }
     }
@@ -406,7 +406,7 @@ impl Decodable for InternalClause {
         Ok(Self(Clause {
             to: {
                 let address = Address::decode(buf)?;
-                if address.to_bytes().iter().all(|&c| c == 0) {
+                if address.to_fixed_bytes() == [0; 20] {
                     // None is zero address (contract creation). It is not
                     // distinguishable from real [0; 20] address by design:
                     // null address is a really existing one, parent of contracts.
