@@ -1,3 +1,4 @@
+use crate::address::AddressValidationError;
 use blake2::{digest::consts::U32, Blake2b, Digest};
 use tiny_keccak::{Hasher, Keccak};
 
@@ -20,4 +21,22 @@ pub fn keccak<S: AsRef<[u8]>>(bytes: S) -> [u8; 32] {
     let mut hash = [0; 32];
     hasher.finalize(&mut hash);
     hash
+}
+
+#[cfg(not(tarpaulin_include))]
+pub fn decode_hex(s: &str) -> Result<Vec<u8>, AddressValidationError> {
+    //! Convert a hex string (with or without 0x prefix) to binary.
+    let prefix = if s.starts_with("0x") { 2 } else { 0 };
+    (0..s.len())
+        .skip(prefix)
+        .step_by(2)
+        .map(|i| {
+            u8::from_str_radix(
+                s.get(i..i + 2)
+                    .ok_or(AddressValidationError::InvalidLength)?,
+                16,
+            )
+            .map_err(|_| AddressValidationError::InvalidHex)
+        })
+        .collect()
 }

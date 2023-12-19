@@ -40,4 +40,4 @@ pub mod transactions;
 mod utils;
 pub use ethabi;
 pub use ethereum_types::U256;
-pub use utils::{blake2_256, keccak};
+pub use utils::{blake2_256, decode_hex, keccak};
