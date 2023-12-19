@@ -51,20 +51,8 @@ cargo tarpaulin --out Html
 ```
 
 You will find coverage in `tarpaulin-report.html` (gitignored) file at the root
-of repository.
+of repository. CI does this automatically, so you may not need to execute this locally.
 
-
-## Examples
-Do you want to help show off some ways for how the library works? Feel free to
-work on an example and open up a PR!
-
-[install Rust]: http://rust-lang.org/install.html
-
-To run the tests:
-
-```bash
-$ cargo test
-```
 
 ## Types of Contributions
 
@@ -151,20 +139,21 @@ Before you submit a pull request, check that it meets these guidelines:
 ## Deploying
 
 A reminder for the maintainers on how to deploy.
-Make sure all your changes are committed (including an entry in `CHANGELOG.md`).
 
-*First-time only*: to update `git push` to push both the commits and tags simultaneously, run this command
-as mentioned in [this post](https://stackoverflow.com/questions/3745135/push-git-commits-tags-simultaneously):
-
+First, create a release branch from `master` and bump a version there, open a release PR:
 ```shell
-$ git config --global push.followTags true
-```
-
-Then run:
-```shell
-$ cargo bump patch --git-tag # possible: major / minor / patch
+$ git checkout master
+$ git pull origin master
+$ git switch -c release/x.y.z
+$ cargo bump patch # possible: major / minor / patch
 $ git push
+$ gh pr create --title 'Release x.y.z'  # Or go via github GUI
 ```
 
-GitHub Actions will then deploy to [crates.io](https://crates.io/) if tests pass,
-once code is merged to the `main` branch.
+When all checks are green, merge it into `master`. Wait for tests to pass and create a tag to trigger automated release:
+```shell
+$ git checkout master
+$ git pull origin master
+$ git tag vx.y.z
+$ git push --tags
+```

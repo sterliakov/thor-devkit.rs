@@ -2,7 +2,8 @@
 #![warn(rust_2018_idioms, missing_docs)]
 #![deny(dead_code, unused_imports, unused_mut)]
 
-//! Rust library to aid coding with VeChain, eg. Wallets/Tx/Sign/Verify.
+//! Rust library to aid coding with VeChain: wallets, transactions signing,
+//! encoding and verification, smart contract ABI interfacing, etc.
 //!
 //! This library acts primary as a proxy to several underlying libraries,
 //! with the addition of some VeChain-specific toolchain components.
@@ -52,7 +53,7 @@
 //!
 //! ## Examples
 //!
-//! You can check out sample usage of this crate in the [examples/](https://github.com/sterliakov/thor-devkit/tree/main/examples)
+//! You can check out sample usage of this crate in the [examples/](https://github.com/sterliakov/thor-devkit.rs/tree/master/examples)
 //! folder in the project repo on GitHub.
 //!
 //! ## Readme Docs
@@ -61,7 +62,7 @@
 //! [crates.io] page, or alternatively in the [`README.md`] file on the GitHub project repo.
 //!
 //! [crates.io]: https://crates.io/crates/thor-devkit
-//! [`README.md`]: https://github.com/sterliakov/thor-devkit
+//! [`README.md`]: https://github.com/sterliakov/thor-devkit.rs
 //!
 //!
 //! ## Contributing
@@ -72,11 +73,11 @@
 //! Check out the [Contributing][] section in the docs for more info.
 //!
 //! [Contributing]: CONTRIBUTING.md
-//! [open an issue]: https://github.com/sterliakov/thor-devkit/issues
+//! [open an issue]: https://github.com/sterliakov/thor-devkit.rs/issues
 //!
 //! ## License
 //!
-//! This project is proudly licensed under the GNU General Public License v3 ([LICENSE](LICENSE).
+//! This project is proudly licensed under the GNU General Public License v3 ([LICENSE](LICENSE)).
 //!
 //! `thor-devkit` can be distributed according to the GNU General Public License v3. Contributions
 //! will be accepted under the same license.
