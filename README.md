@@ -1,7 +1,7 @@
 # thor-devkit.rs
 
-![Crates.io](https://img.shields.io/crates/v/thor-devkit.rs?logo=rust)
-![docs.rs](https://img.shields.io/docsrs/thor-devkit.rs)
+![Crates.io](https://img.shields.io/crates/v/thor-devkit?logo=rust)
+![docs.rs](https://img.shields.io/docsrs/thor-devkit)
 ![Build](https://img.shields.io/github/actions/workflow/status/sterliakov/thor-devkit.rs/build.yml?logo=github)
 ![Test](https://img.shields.io/github/actions/workflow/status/sterliakov/thor-devkit.rs/test.yml?logo=github&label=test)
 ![Codecov](https://img.shields.io/codecov/c/github/sterliakov/thor-devkit.rs)
