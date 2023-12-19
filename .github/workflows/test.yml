@@ -23,9 +23,7 @@ jobs:
           override: true
 
       - name: Install tarpaulin
-        uses: dtolnay/install@master
-        with:
-          crate: cargo-tarpaulin
+        run: cargo install cargo-tarpaulin
 
       - name: Run tests with coverage
         run: RUST_BACKTRACE=1 cargo tarpaulin --out Xml
