@@ -316,16 +316,6 @@ impl Transaction {
         }
     }
 
-    pub fn signature(&self) -> Option<Bytes> {
-        //! Signature. 65 bytes for regular transactions, 130 - for VIP-191.
-        //!
-        //! Ignored when making a signing hash.
-        //!
-        //! For VIP-191 transactions, this would be a simple concatenation
-        //! of two signatures.
-        self.signature.clone()
-    }
-
     pub fn has_valid_signature(&self) -> bool {
         //! Check wheter the signature is valid.
         self._has_valid_signature().unwrap_or(false)
@@ -351,6 +341,19 @@ impl Transaction {
                     )
                     .is_ok())
             }
+        }
+    }
+
+    pub fn to_broadcastable_bytes(&self) -> Result<Bytes, secp256k1::Error> {
+        //! Create a binary representation.
+        //!
+        //! Returns `Err(secp256k1::Error::IncorrectSignature)` if signature is not set.
+        if self.signature.is_some() {
+            let mut buf = alloy_rlp::BytesMut::new();
+            self.encode(&mut buf);
+            Ok(buf.into())
+        } else {
+            Err(secp256k1::Error::IncorrectSignature)
         }
     }
 }

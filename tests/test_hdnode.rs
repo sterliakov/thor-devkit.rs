@@ -1,5 +1,4 @@
 use bip32::{ExtendedKey, ExtendedKeyAttrs, Prefix};
-use bip39::{Language::English, Mnemonic};
 use thor_devkit::decode_hex;
 use thor_devkit::hdnode::*;
 
@@ -36,7 +35,7 @@ fn test_from_seed() {
 fn test_from_mnemonic_vet() {
     let mnemonic = Mnemonic::from_phrase(
         "ignore empty bird silly journey junior ripple have guard waste between tenant",
-        English,
+        Language::English,
     )
     .unwrap();
     let private = "e4a2687ec443f4d23b6ba9e7d904a31acdda90032b34aa0e642e6dd3fd36f682";
@@ -235,7 +234,7 @@ fn test_from_public_key_can_derive() {
 fn test_build() {
     let mnemonic = Mnemonic::from_phrase(
         "ignore empty bird silly journey junior ripple have guard waste between tenant",
-        English,
+        Language::English,
     )
     .unwrap();
 

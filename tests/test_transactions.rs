@@ -254,7 +254,7 @@ fn test_sign_undelegated() {
     );
 
     let signed = tx.sign(&pk);
-    assert_eq!(signed.signature().unwrap(), signature.to_vec());
+    assert_eq!(signed.signature.clone().unwrap(), signature.to_vec());
 
     let mut buf = vec![];
     signed.encode(&mut buf);
