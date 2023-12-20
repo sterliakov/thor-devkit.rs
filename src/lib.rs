@@ -77,16 +77,17 @@
 //!
 //! ## License
 //!
-//! This project is proudly licensed under the GNU General Public License v3 ([LICENSE](https://github.com/sterliakov/thor-devkit.rs/blob/master/LICENSE)).
+//! This project is proudly licensed under the Lesser GNU General Public License v3 ([LICENSE](https://github.com/sterliakov/thor-devkit.rs/blob/master/LICENSE)).
 //!
-//! `thor-devkit` can be distributed according to the GNU General Public License v3. Contributions
+//! `thor-devkit` can be distributed according to the Lesser GNU General Public License v3. Contributions
 //! will be accepted under the same license.
 
-pub mod address;
+mod address;
+pub use address::{Address, AddressConvertible, PrivateKey, PublicKey};
 pub mod hdnode;
 pub mod rlp;
 pub mod transactions;
 mod utils;
-pub use ethabi;
 pub use ethereum_types::U256;
-pub use utils::{blake2_256, decode_hex, keccak};
+pub use rustc_hex::FromHexError as AddressValidationError;
+pub use utils::{blake2_256, keccak};

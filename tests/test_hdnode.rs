@@ -1,11 +1,15 @@
 use bip32::{ExtendedKey, ExtendedKeyAttrs, Prefix};
-use thor_devkit::decode_hex;
+use rustc_hex::FromHex;
 use thor_devkit::hdnode::*;
+
+fn decode_hex(hex: &str) -> Vec<u8> {
+    hex.from_hex().unwrap()
+}
 
 #[test]
 fn test_from_seed() {
     //! Test vectors from https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki
-    let seed = decode_hex("fffcf9f6f3f0edeae7e4e1dedbd8d5d2cfccc9c6c3c0bdbab7b4b1aeaba8a5a29f9c999693908d8a8784817e7b7875726f6c696663605d5a5754514e4b484542").unwrap();
+    let seed = decode_hex("fffcf9f6f3f0edeae7e4e1dedbd8d5d2cfccc9c6c3c0bdbab7b4b1aeaba8a5a29f9c999693908d8a8784817e7b7875726f6c696663605d5a5754514e4b484542");
     let node = HDNode::build()
         .seed(seed.clone().try_into().unwrap())
         .path("m".parse().unwrap())
@@ -56,12 +60,12 @@ fn test_from_mnemonic_vet() {
             .public_key()
             .serialize_uncompressed()
             .to_vec(),
-        decode_hex(public).unwrap(),
+        decode_hex(public),
         "Public key differs"
     );
     assert_eq!(
         node.chain_code().to_vec(),
-        decode_hex(chain_code).unwrap(),
+        decode_hex(chain_code),
         "Chain code differs"
     );
     let same_node = HDNode::build()
@@ -118,7 +122,7 @@ fn test_from_mnemonic_vet() {
 #[test]
 fn test_derive() {
     //! Test vectors from https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki
-    let seed = decode_hex("fffcf9f6f3f0edeae7e4e1dedbd8d5d2cfccc9c6c3c0bdbab7b4b1aeaba8a5a29f9c999693908d8a8784817e7b7875726f6c696663605d5a5754514e4b484542").unwrap();
+    let seed = decode_hex("fffcf9f6f3f0edeae7e4e1dedbd8d5d2cfccc9c6c3c0bdbab7b4b1aeaba8a5a29f9c999693908d8a8784817e7b7875726f6c696663605d5a5754514e4b484542");
     // Not hardened
     let node = HDNode::build()
         .seed(seed.clone().try_into().unwrap())
@@ -271,7 +275,6 @@ fn test_build() {
     HDNode::build()
         .master_private_key_bytes(
             decode_hex("00e4a2687ec443f4d23b6ba9e7d904a31acdda90032b34aa0e642e6dd3fd36f682")
-                .unwrap()
                 .try_into()
                 .unwrap(),
             [0; 32],
@@ -281,7 +284,6 @@ fn test_build() {
     HDNode::build()
         .master_public_key_bytes(
             decode_hex("035A784662A4A20A65BF6AAB9AE98A6C068A81C52E4B032C0FB5400C706CFCCC56")
-                .unwrap()
                 .try_into()
                 .unwrap(),
             [0; 32],

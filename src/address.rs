@@ -100,12 +100,3 @@ impl AddressConvertible for secp256k1::PublicKey {
         Address(WrappedAddress::from_slice(&suffix))
     }
 }
-
-/// Invalid public key format reasons
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub enum AddressValidationError {
-    /// Not of length 20
-    InvalidLength,
-    /// Not a hex string
-    InvalidHex,
-}

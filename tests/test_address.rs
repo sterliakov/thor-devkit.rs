@@ -1,4 +1,4 @@
-use thor_devkit::address::*;
+use thor_devkit::{Address, AddressConvertible, PublicKey};
 
 #[test]
 fn test_upubkey_to_address() {

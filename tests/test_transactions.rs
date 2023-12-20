@@ -1,16 +1,21 @@
+use rustc_hex::FromHex;
 use secp256k1::Secp256k1;
-use thor_devkit::address::{AddressConvertible, PrivateKey};
 use thor_devkit::rlp::{Bytes, Decodable, Encodable, RLPError};
 use thor_devkit::transactions::*;
-use thor_devkit::{decode_hex, U256};
+use thor_devkit::U256;
+use thor_devkit::{AddressConvertible, PrivateKey};
+
+fn decode_hex(hex: &str) -> Vec<u8> {
+    hex.from_hex().unwrap()
+}
 
 const PK_STRING: &str = "7582be841ca040aa940fff6c05773129e135623e41acce3e0b8ba520dc1ae26a";
 macro_rules! make_pk {
     () => {
-        PrivateKey::from_slice(&decode_hex(PK_STRING).unwrap()).unwrap()
+        PrivateKey::from_slice(&decode_hex(PK_STRING)).unwrap()
     };
     ($hex:expr) => {
-        PrivateKey::from_slice(&decode_hex($hex).unwrap()).unwrap()
+        PrivateKey::from_slice(&decode_hex($hex)).unwrap()
     };
 }
 
@@ -67,7 +72,7 @@ fn test_rlp_encode_basic() {
     let tx = undelegated_tx!();
     let expected = decode_hex(
         "f8540184aabbccdd20f840df947567d83b7b8d80addcb281a71d54fc7b3364ffed82271086000000606060df947567d83b7b8d80addcb281a71d54fc7b3364ffed824e208600000060606081808252088083bc614ec0"
-    ).unwrap();
+    );
     let mut buf = vec![];
     tx.encode(&mut buf);
     assert_eq!(buf, expected);
@@ -92,7 +97,7 @@ fn test_rlp_encode_basic_contract() {
         }],
         ..undelegated_tx!()
     };
-    let expected = decode_hex("d90184aabbccdd20c6c5808082123481808252088083bc614ec0").unwrap();
+    let expected = decode_hex("d90184aabbccdd20c6c5808082123481808252088083bc614ec0");
     let mut buf = vec![];
     tx.encode(&mut buf);
     buf.iter().for_each(|c| print!("{:02x?}", c));
@@ -109,7 +114,7 @@ fn test_rlp_encode_delegated() {
     let tx = delegated_tx!();
     let expected = decode_hex(
         "f85a0184aabbccdd20f840df947567d83b7b8d80addcb281a71d54fc7b3364ffed82271086000000606060df947567d83b7b8d80addcb281a71d54fc7b3364ffed824e208600000060606081808252088083bc614ec6018431323334"
-    ).unwrap();
+    );
     let mut buf = vec![];
     tx.encode(&mut buf);
     assert_eq!(buf, expected);
@@ -131,7 +136,7 @@ fn test_rlp_encode_reserved_unused_untrimmed() {
     };
     let expected = decode_hex(
         "f8540184aabbccdd20f840df947567d83b7b8d80addcb281a71d54fc7b3364ffed82271086000000606060df947567d83b7b8d80addcb281a71d54fc7b3364ffed824e208600000060606081808252088083bc614ec0"
-    ).unwrap();
+    );
     let mut buf = vec![];
     tx.encode(&mut buf);
     assert_eq!(buf, expected);
@@ -173,15 +178,14 @@ fn test_rlp_encode_reserved_can_be_omitted() {
 fn test_rlp_encode_depends_on() {
     // Verified on-chain after signing.
     let tx = Transaction {
-        depends_on: Some(U256::from_big_endian(
-            &decode_hex("360341090d2c4a01fa7da816c57d51c0b2fa3fcf1f99141806efc99f568c0b2a")
-                .unwrap(),
-        )),
+        depends_on: Some(U256::from_big_endian(&decode_hex(
+            "360341090d2c4a01fa7da816c57d51c0b2fa3fcf1f99141806efc99f568c0b2a",
+        ))),
         ..undelegated_tx!()
     };
     let mut buf = vec![];
     tx.encode(&mut buf);
-    let expected = decode_hex("f8740184aabbccdd20f840df947567d83b7b8d80addcb281a71d54fc7b3364ffed82271086000000606060df947567d83b7b8d80addcb281a71d54fc7b3364ffed824e20860000006060608180825208a0360341090d2c4a01fa7da816c57d51c0b2fa3fcf1f99141806efc99f568c0b2a83bc614ec0").unwrap();
+    let expected = decode_hex("f8740184aabbccdd20f840df947567d83b7b8d80addcb281a71d54fc7b3364ffed82271086000000606060df947567d83b7b8d80addcb281a71d54fc7b3364ffed824e20860000006060608180825208a0360341090d2c4a01fa7da816c57d51c0b2fa3fcf1f99141806efc99f568c0b2a83bc614ec0");
     assert_eq!(buf, expected);
 
     assert_eq!(
@@ -193,7 +197,7 @@ fn test_rlp_encode_depends_on() {
 #[test]
 fn test_rlp_encode_depends_on_malformed() {
     // Manually crafted: here depends_on is 33 bytes long.
-    let malformed = decode_hex("f8750184aabbccdd20f840df947567d83b7b8d80addcb281a71d54fc7b3364ffed82271086000000606060df947567d83b7b8d80addcb281a71d54fc7b3364ffed824e20860000006060608180825208a136034141090d2c4a01fa7da816c57d51c0b2fa3fcf1f99141806efc99f568c0b2a83bc614ec0").unwrap();
+    let malformed = decode_hex("f8750184aabbccdd20f840df947567d83b7b8d80addcb281a71d54fc7b3364ffed82271086000000606060df947567d83b7b8d80addcb281a71d54fc7b3364ffed824e20860000006060608180825208a136034141090d2c4a01fa7da816c57d51c0b2fa3fcf1f99141806efc99f568c0b2a83bc614ec0");
     assert_eq!(
         Transaction::decode(&mut &malformed[..]).unwrap_err(),
         RLPError::Overflow
@@ -247,12 +251,12 @@ fn test_sign_undelegated() {
     let hash = tx.get_signing_hash();
     assert_eq!(
         hash.to_vec(),
-        decode_hex("2a1c25ce0d66f45276a5f308b99bf410e2fc7d5b6ea37a49f2ab9f1da9446478").unwrap()
+        decode_hex("2a1c25ce0d66f45276a5f308b99bf410e2fc7d5b6ea37a49f2ab9f1da9446478")
     );
     let signature = Transaction::sign_hash(hash, &pk);
     assert_eq!(
         signature.to_vec(),
-        decode_hex("f76f3c91a834165872aa9464fc55b03a13f46ea8d3b858e528fcceaf371ad6884193c3f313ff8effbb57fe4d1adc13dceb933bedbf9dbb528d2936203d5511df00").unwrap()
+        decode_hex("f76f3c91a834165872aa9464fc55b03a13f46ea8d3b858e528fcceaf371ad6884193c3f313ff8effbb57fe4d1adc13dceb933bedbf9dbb528d2936203d5511df00")
     );
 
     let signed = tx.sign(&pk);
@@ -304,17 +308,17 @@ fn test_undelegated_signed_properties() {
     let tx = undelegated_tx!().sign(&pk);
     assert_eq!(
         tx.signature.clone().unwrap(),
-        decode_hex("f76f3c91a834165872aa9464fc55b03a13f46ea8d3b858e528fcceaf371ad6884193c3f313ff8effbb57fe4d1adc13dceb933bedbf9dbb528d2936203d5511df00").unwrap(),
+        decode_hex("f76f3c91a834165872aa9464fc55b03a13f46ea8d3b858e528fcceaf371ad6884193c3f313ff8effbb57fe4d1adc13dceb933bedbf9dbb528d2936203d5511df00"),
     );
     let pubkey = pk.public_key(&Secp256k1::signing_only());
     assert_eq!(tx.origin().unwrap().unwrap(), pubkey);
     assert_eq!(
         tx.id().unwrap().unwrap().to_vec(),
-        decode_hex("da90eaea52980bc4bb8d40cb2ff84d78433b3b4a6e7d50b75736c5e3e77b71ec").unwrap()
+        decode_hex("da90eaea52980bc4bb8d40cb2ff84d78433b3b4a6e7d50b75736c5e3e77b71ec")
     );
     assert_eq!(
         &tx.get_delegate_signing_hash(&pubkey.address())[..],
-        decode_hex("da90eaea52980bc4bb8d40cb2ff84d78433b3b4a6e7d50b75736c5e3e77b71ec").unwrap()
+        decode_hex("da90eaea52980bc4bb8d40cb2ff84d78433b3b4a6e7d50b75736c5e3e77b71ec")
     );
 }
 
@@ -349,7 +353,7 @@ fn test_with_signature_validated() {
 
 #[test]
 fn test_decode_real() {
-    let src = decode_hex("f8804a880106f4db1482fd5a81b4e1e09477845a52acad7fe6a346f5b09e5e89e7caec8e3b890391c64cd2bc206c008080828ca08088a63565b632b9b7c3c0b841d76de99625a1a8795e467d509818701ec5961a8a4cf7cc2d75cee95f9ad70891013aaa4088919cc46df4f1e3f87b4ea44d002033fa3f7bd69485cb807aa2985100").unwrap();
+    let src = decode_hex("f8804a880106f4db1482fd5a81b4e1e09477845a52acad7fe6a346f5b09e5e89e7caec8e3b890391c64cd2bc206c008080828ca08088a63565b632b9b7c3c0b841d76de99625a1a8795e467d509818701ec5961a8a4cf7cc2d75cee95f9ad70891013aaa4088919cc46df4f1e3f87b4ea44d002033fa3f7bd69485cb807aa2985100");
     let tx = Transaction::decode(&mut &src[..]).unwrap();
     let buf = tx.to_broadcastable_bytes().expect("Was signed");
     assert_eq!(buf, src);
@@ -357,7 +361,7 @@ fn test_decode_real() {
 
 #[test]
 fn test_decode_real_delegated() {
-    let src = decode_hex("f9011f27880107b55a710b022420f87ef87c9412e3582d7ca22234f39d2a7be12c98ea9c077e2580b864b391c7d37674686f2d7573640000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000085bb373400000000000000000000000000000000000000000000000000000000657f828f8180830136798086018c7a1602b1c101b882abd35e0d57fd07462b8517109797bd2608f97a4961d0bb1fbc09d4a2f4983c2230d8a6cb4f3136e49f58eb6d32cf5edad2b0f69af6f0bf767d502a8f5510824101d87ae764add6cddff325122bf5658364fa2a04ad538621bfeb40c56c7185cf28031d9b945e7a124f171daa232499038312de60b3db4cdd6beecde6c8c0c967a100").unwrap();
+    let src = decode_hex("f9011f27880107b55a710b022420f87ef87c9412e3582d7ca22234f39d2a7be12c98ea9c077e2580b864b391c7d37674686f2d7573640000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000085bb373400000000000000000000000000000000000000000000000000000000657f828f8180830136798086018c7a1602b1c101b882abd35e0d57fd07462b8517109797bd2608f97a4961d0bb1fbc09d4a2f4983c2230d8a6cb4f3136e49f58eb6d32cf5edad2b0f69af6f0bf767d502a8f5510824101d87ae764add6cddff325122bf5658364fa2a04ad538621bfeb40c56c7185cf28031d9b945e7a124f171daa232499038312de60b3db4cdd6beecde6c8c0c967a100");
     let tx = Transaction::decode(&mut &src[..]).unwrap();
     let mut buf = vec![];
     tx.encode(&mut buf);
@@ -366,14 +370,14 @@ fn test_decode_real_delegated() {
 
 #[test]
 fn test_decode_delegated_signature_too_short() {
-    let src = decode_hex("f9011e27880107b55a710b022420f87ef87c9412e3582d7ca22234f39d2a7be12c98ea9c077e2580b864b391c7d37674686f2d7573640000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000085bb373400000000000000000000000000000000000000000000000000000000657f828f8180830136798086018c7a1602b1c101b881abd35e0d57fd07462b8517109797bd2608f97a4961d0bb1fbc09d4a2f4983c2230d8a6cb4f3136e49f58eb6d32cf5edad2b0f69af6f0bf767d502a8f5510824101d87ae764add6cddff325122bf5658364fa2a04ad538621bfeb40c56c7185cf28031d9b945e7a124f171daa232499038312de60b3db4cdd6beecde6c8c0c967a1").unwrap();
+    let src = decode_hex("f9011e27880107b55a710b022420f87ef87c9412e3582d7ca22234f39d2a7be12c98ea9c077e2580b864b391c7d37674686f2d7573640000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000085bb373400000000000000000000000000000000000000000000000000000000657f828f8180830136798086018c7a1602b1c101b881abd35e0d57fd07462b8517109797bd2608f97a4961d0bb1fbc09d4a2f4983c2230d8a6cb4f3136e49f58eb6d32cf5edad2b0f69af6f0bf767d502a8f5510824101d87ae764add6cddff325122bf5658364fa2a04ad538621bfeb40c56c7185cf28031d9b945e7a124f171daa232499038312de60b3db4cdd6beecde6c8c0c967a1");
     let tx = Transaction::decode(&mut &src[..]).expect("Should be decodable");
     assert!(!tx.has_valid_signature())
 }
 
 #[test]
 fn test_decode_delegated_signature_too_long() {
-    let src = decode_hex("f9012027880107b55a710b022420f87ef87c9412e3582d7ca22234f39d2a7be12c98ea9c077e2580b864b391c7d37674686f2d7573640000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000085bb373400000000000000000000000000000000000000000000000000000000657f828f8180830136798086018c7a1602b1c101b883abd35e0d57fd07462b8517109797bd2608f97a4961d0bb1fbc09d4a2f4983c2230d8a6cb4f3136e49f58eb6d32cf5edad2b0f69af6f0bf767d502a8f5510824101d87ae764add6cddff325122bf5658364fa2a04ad538621bfeb40c56c7185cf28031d9b945e7a124f171daa232499038312de60b3db4cdd6beecde6c8c0c967a10101").unwrap();
+    let src = decode_hex("f9012027880107b55a710b022420f87ef87c9412e3582d7ca22234f39d2a7be12c98ea9c077e2580b864b391c7d37674686f2d7573640000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000085bb373400000000000000000000000000000000000000000000000000000000657f828f8180830136798086018c7a1602b1c101b883abd35e0d57fd07462b8517109797bd2608f97a4961d0bb1fbc09d4a2f4983c2230d8a6cb4f3136e49f58eb6d32cf5edad2b0f69af6f0bf767d502a8f5510824101d87ae764add6cddff325122bf5658364fa2a04ad538621bfeb40c56c7185cf28031d9b945e7a124f171daa232499038312de60b3db4cdd6beecde6c8c0c967a10101");
     let tx = Transaction::decode(&mut &src[..]).expect("Should be decodable");
     assert!(!tx.has_valid_signature())
 }
@@ -382,7 +386,7 @@ fn test_decode_delegated_signature_too_long() {
 fn test_rlp_decode_address_too_long() {
     let malformed = decode_hex(
         "ec0184aabbccdd20d8d795515167d83b7b8d80addcb281a71d54fc7b3364ffed808081808252088083bc614ec0"
-    ).unwrap();
+    );
     assert_eq!(
         Transaction::decode(&mut &malformed[..]).unwrap_err(),
         RLPError::ListLengthMismatch {
@@ -396,8 +400,7 @@ fn test_rlp_decode_address_too_long() {
 fn test_rlp_decode_address_startswith_zero_misencoded() {
     let malformed = decode_hex(
         "eb0184aabbccdd20d8d7940067d83b7b8d80addcb281a71d54fc7b3364ffed808081808252088083bc614ec0",
-    )
-    .unwrap();
+    );
     assert_eq!(
         Transaction::decode(&mut &malformed[..]).unwrap_err(),
         RLPError::LeadingZero
