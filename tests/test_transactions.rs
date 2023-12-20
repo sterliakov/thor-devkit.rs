@@ -1,5 +1,6 @@
 use secp256k1::Secp256k1;
 use thor_devkit::address::{AddressConvertible, PrivateKey};
+use thor_devkit::rlp::{Bytes, Decodable, Encodable, RLPError};
 use thor_devkit::transactions::*;
 use thor_devkit::{decode_hex, U256};
 
@@ -195,10 +196,7 @@ fn test_rlp_encode_depends_on_malformed() {
     let malformed = decode_hex("f8750184aabbccdd20f840df947567d83b7b8d80addcb281a71d54fc7b3364ffed82271086000000606060df947567d83b7b8d80addcb281a71d54fc7b3364ffed824e20860000006060608180825208a136034141090d2c4a01fa7da816c57d51c0b2fa3fcf1f99141806efc99f568c0b2a83bc614ec0").unwrap();
     assert_eq!(
         Transaction::decode(&mut &malformed[..]).unwrap_err(),
-        alloy_rlp::Error::ListLengthMismatch {
-            expected: 32,
-            got: 33
-        }
+        RLPError::Overflow
     );
 }
 
@@ -369,25 +367,15 @@ fn test_decode_real_delegated() {
 #[test]
 fn test_decode_delegated_signature_too_short() {
     let src = decode_hex("f9011e27880107b55a710b022420f87ef87c9412e3582d7ca22234f39d2a7be12c98ea9c077e2580b864b391c7d37674686f2d7573640000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000085bb373400000000000000000000000000000000000000000000000000000000657f828f8180830136798086018c7a1602b1c101b881abd35e0d57fd07462b8517109797bd2608f97a4961d0bb1fbc09d4a2f4983c2230d8a6cb4f3136e49f58eb6d32cf5edad2b0f69af6f0bf767d502a8f5510824101d87ae764add6cddff325122bf5658364fa2a04ad538621bfeb40c56c7185cf28031d9b945e7a124f171daa232499038312de60b3db4cdd6beecde6c8c0c967a1").unwrap();
-    assert_eq!(
-        Transaction::decode(&mut &src[..]).unwrap_err(),
-        alloy_rlp::Error::ListLengthMismatch {
-            expected: 130,
-            got: 129
-        }
-    )
+    let tx = Transaction::decode(&mut &src[..]).expect("Should be decodable");
+    assert!(!tx.has_valid_signature())
 }
 
 #[test]
 fn test_decode_delegated_signature_too_long() {
     let src = decode_hex("f9012027880107b55a710b022420f87ef87c9412e3582d7ca22234f39d2a7be12c98ea9c077e2580b864b391c7d37674686f2d7573640000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000085bb373400000000000000000000000000000000000000000000000000000000657f828f8180830136798086018c7a1602b1c101b883abd35e0d57fd07462b8517109797bd2608f97a4961d0bb1fbc09d4a2f4983c2230d8a6cb4f3136e49f58eb6d32cf5edad2b0f69af6f0bf767d502a8f5510824101d87ae764add6cddff325122bf5658364fa2a04ad538621bfeb40c56c7185cf28031d9b945e7a124f171daa232499038312de60b3db4cdd6beecde6c8c0c967a10101").unwrap();
-    assert_eq!(
-        Transaction::decode(&mut &src[..]).unwrap_err(),
-        alloy_rlp::Error::ListLengthMismatch {
-            expected: 130,
-            got: 131
-        }
-    )
+    let tx = Transaction::decode(&mut &src[..]).expect("Should be decodable");
+    assert!(!tx.has_valid_signature())
 }
 
 #[test]
@@ -397,7 +385,7 @@ fn test_rlp_decode_address_too_long() {
     ).unwrap();
     assert_eq!(
         Transaction::decode(&mut &malformed[..]).unwrap_err(),
-        alloy_rlp::Error::ListLengthMismatch {
+        RLPError::ListLengthMismatch {
             expected: 20,
             got: 21
         }
@@ -412,7 +400,7 @@ fn test_rlp_decode_address_startswith_zero_misencoded() {
     .unwrap();
     assert_eq!(
         Transaction::decode(&mut &malformed[..]).unwrap_err(),
-        alloy_rlp::Error::LeadingZero
+        RLPError::LeadingZero
     );
 }
 

@@ -77,13 +77,14 @@
 //!
 //! ## License
 //!
-//! This project is proudly licensed under the GNU General Public License v3 ([LICENSE](LICENSE)).
+//! This project is proudly licensed under the GNU General Public License v3 ([LICENSE](https://github.com/sterliakov/thor-devkit.rs/blob/master/LICENSE)).
 //!
 //! `thor-devkit` can be distributed according to the GNU General Public License v3. Contributions
 //! will be accepted under the same license.
 
 pub mod address;
 pub mod hdnode;
+pub mod rlp;
 pub mod transactions;
 mod utils;
 pub use ethabi;

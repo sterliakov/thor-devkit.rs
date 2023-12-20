@@ -1,6 +1,6 @@
-//! VeChain-tailored Hierarchically deterministic nodes support
+//! VeChain-tailored hierarchically deterministic nodes support
 //!
-//! `Reference <https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki>`
+//! [In-deep explanation](https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki)
 
 use bip32::{
     ChainCode, ChildNumber, DerivationPath, ExtendedKey, ExtendedKeyAttrs, ExtendedPrivateKey,
