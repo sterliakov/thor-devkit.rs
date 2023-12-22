@@ -30,19 +30,18 @@ tiny-bip39 = "1.0.0"
 rustc-hex = "2.1.0"
 open-fastrlp = { version = "0.1.4", features = ["std", "ethereum-types"] }
 bytes = "1.5.0"
+reqwest = { version = "0.11", features = ["json"], optional = true }
+serde = { version = "^1.0", features=["derive"], optional = true }
+serde-hex = { version = "^0.1", optional = true }
+serde_json = { version = "^1.0", optional = true }
 
 [dev-dependencies]
 # version_sync: to ensure versions in `Cargo.toml` and `README.md` are in sync
 version-sync = "0.9.4"
 rand = { version = "0.8.5", features = ["getrandom"] }
-
-# cargo-bump: to bump package version and tag a commit at the same time.
-# actually, the docs recommend installing this globally:
-#   $ git clone https://github.com/rnag/cargo-bump && cd cargo-bump && cargo install --path . && cd .. && rm -rf cargo-bump
-# logging utilities
-# log = "^0.4"
-# sensible-env-logger = "0.1.0"
-# tokio: for `async` support
-# tokio = { version = "^1.0", features = ["macros", "rt-multi-thread"] }
+tokio = { version = "1", features = ["full"] }
 
 [features]
+# default = ['http']
+serde = ["dep:serde", "dep:serde-hex", "dep:serde_json"]
+http = ["dep:reqwest", "serde"]
