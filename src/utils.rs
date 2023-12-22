@@ -21,3 +21,67 @@ pub fn keccak<S: AsRef<[u8]>>(bytes: S) -> [u8; 32] {
     hasher.finalize(&mut hash);
     hash
 }
+
+#[cfg(feature = "serde")]
+pub(crate) mod unhex {
+    use serde::de::Error;
+    use serde::{Deserialize, Deserializer, Serializer};
+    use serde_with::de::DeserializeAs;
+    use serde_with::formats::{Format, Lowercase, Uppercase};
+    use serde_with::ser::SerializeAs;
+    use std::borrow::Cow;
+    use std::convert::{TryFrom, TryInto};
+    use std::marker::PhantomData;
+
+    #[derive(Copy, Clone, Debug, Default)]
+    pub struct Hex<FORMAT: Format = Lowercase>(PhantomData<FORMAT>);
+
+    impl<T> SerializeAs<T> for Hex<Lowercase>
+    where
+        T: AsRef<[u8]>,
+    {
+        fn serialize_as<S>(source: &T, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+        {
+            serializer.serialize_str(&("0x".to_string() + &hex::encode(source)))
+        }
+    }
+
+    impl<T> SerializeAs<T> for Hex<Uppercase>
+    where
+        T: AsRef<[u8]>,
+    {
+        fn serialize_as<S>(source: &T, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+        {
+            serializer.serialize_str(&("0x".to_string() + &hex::encode_upper(source)))
+        }
+    }
+
+    impl<'de, T, FORMAT> DeserializeAs<'de, T> for Hex<FORMAT>
+    where
+        T: TryFrom<Vec<u8>>,
+        FORMAT: Format,
+    {
+        fn deserialize_as<D: Deserializer<'de>>(deserializer: D) -> Result<T, D::Error> {
+            <Cow<'de, str> as Deserialize<'de>>::deserialize(deserializer)
+                .and_then(|s| {
+                    hex::decode(s.strip_prefix("0x").unwrap_or(&s)).map_err(|e| {
+                        println!("{:?}", e);
+                        Error::custom(e)
+                    })
+                })
+                .and_then(|vec: Vec<u8>| {
+                    let length = vec.len();
+                    vec.try_into().map_err(|_e: T::Error| {
+                        Error::custom(format!(
+                            "Can't convert a Byte Vector of length {} to the output type.",
+                            length
+                        ))
+                    })
+                })
+        }
+    }
+}

@@ -92,10 +92,10 @@ mod test_network {
                     address: "0x12e3582d7ca22234f39d2a7be12c98ea9c077e25"
                         .parse()
                         .unwrap(),
-                    topics: vec![Topic([
+                    topics: vec![[
                         239, 200, 244, 4, 28, 11, 164, 208, 151, 229, 75, 206, 126, 91, 196, 126,
                         197, 180, 92, 2, 112, 196, 35, 121, 196, 182, 145, 200, 89, 67, 237, 240,
-                    ])],
+                    ]],
                     data: Bytes::copy_from_slice(&clause_data[..]),
                 }],
                 transfers: vec![],

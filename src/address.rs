@@ -6,22 +6,22 @@ use ethereum_types::Address as WrappedAddress;
 pub use secp256k1::{PublicKey, SecretKey as PrivateKey};
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
-#[cfg(feature = "serde")]
-use serde_hex::{SerHex, StrictPfx};
 use std::{
     ops::{Deref, DerefMut},
     result::Result,
     str::FromStr,
 };
 
+#[cfg_attr(feature = "serde", serde_with::serde_as)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(remote = "ethereum_types::H160"))]
-struct _Address(#[cfg_attr(feature = "serde", serde(with = "SerHex::<StrictPfx>"))] [u8; 20]);
+struct _Address(#[cfg_attr(feature = "serde", serde_as(as = "unhex::Hex"))] [u8; 20]);
 
 /// VeChain address.
+#[cfg_attr(feature = "serde", serde_with::serde_as)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct Address(#[cfg_attr(feature = "serde", serde(with = "_Address"))] WrappedAddress);
+pub struct Address(#[cfg_attr(feature = "serde", serde_as(as = "_Address"))] WrappedAddress);
 
 impl DerefMut for Address {
     fn deref_mut(&mut self) -> &mut WrappedAddress {

@@ -1,12 +1,12 @@
 //! Module for interacting with node HTTP APIs.
 
 use crate::rlp::{Bytes, Decodable};
+use crate::utils::unhex;
 use crate::U256;
 use crate::{transactions::Transaction, Address};
 use reqwest::{Client, Url};
 use rustc_hex::ToHex;
 use serde::Deserialize;
-use serde_hex::{SerHex, SerHexSeq, StrictPfx};
 type AResult<T> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>>;
 
 /// A simple HTTP REST client for a VeChain node.
@@ -16,21 +16,21 @@ pub struct ThorNode {
     chain_tag: u8,
 }
 
+#[serde_with::serde_as]
 #[derive(Deserialize)]
 struct RawTxResponse {
-    #[serde(rename = "raw")]
-    #[serde(with = "SerHexSeq::<StrictPfx>")]
+    #[serde_as(as = "unhex::Hex")]
     raw: Bytes,
-    #[serde(rename = "meta")]
     meta: Option<TransactionMeta>,
 }
 
 /// Transaction metadata
+#[serde_with::serde_as]
 #[derive(Clone, Debug, Eq, PartialEq, Deserialize)]
 pub struct TransactionMeta {
     /// Block identifier
     #[serde(rename = "blockID")]
-    #[serde(with = "SerHex::<StrictPfx>")]
+    #[serde_as(as = "unhex::Hex")]
     pub block_id: [u8; 32],
     /// Block number (height)
     #[serde(rename = "blockNumber")]
@@ -81,11 +81,12 @@ pub struct ReceiptOutput {
 }
 
 /// Transaction receipt metadata
+#[serde_with::serde_as]
 #[derive(Clone, Debug, PartialEq, Deserialize)]
 pub struct ReceiptMeta {
     /// Block identifier (bytes32)
     #[serde(rename = "blockID")]
-    #[serde(with = "SerHex::<StrictPfx>")]
+    #[serde_as(as = "unhex::Hex")]
     pub block_id: [u8; 32],
     /// Block number (height)
     #[serde(rename = "blockNumber")]
@@ -95,7 +96,7 @@ pub struct ReceiptMeta {
     pub block_timestamp: i32,
     /// Transaction identifier
     #[serde(rename = "txID")]
-    #[serde(with = "SerHex::<StrictPfx>")]
+    #[serde_as(as = "unhex::Hex")]
     pub tx_id: [u8; 32],
     /// Transaction origin (signer)
     #[serde(rename = "txOrigin")]
@@ -103,6 +104,7 @@ pub struct ReceiptMeta {
 }
 
 /// Emitted contract event
+#[serde_with::serde_as]
 #[derive(Clone, Debug, PartialEq, Deserialize)]
 pub struct Event {
     /// The address of contract which produces the event
@@ -110,16 +112,13 @@ pub struct Event {
     pub address: Address,
     /// Event topics
     #[serde(rename = "topics")]
-    pub topics: Vec<Topic>,
+    #[serde_as(as = "Vec<unhex::Hex>")]
+    pub topics: Vec<[u8; 32]>,
     /// Event data
     #[serde(rename = "data")]
-    #[serde(with = "SerHexSeq::<StrictPfx>")]
+    #[serde_as(as = "unhex::Hex")]
     pub data: Bytes,
 }
-
-/// Single event topic.
-#[derive(Clone, Debug, PartialEq, Deserialize)]
-pub struct Topic(#[serde(with = "SerHex::<StrictPfx>")] pub [u8; 32]);
 
 /// Single transfer during the contract call
 #[derive(Clone, Debug, PartialEq, Deserialize)]
@@ -181,7 +180,7 @@ impl ThorNode {
             .await?
             .text()
             .await?;
-        if response.strip_suffix("\n").unwrap_or(&response) == "null" {
+        if response.strip_suffix('\n').unwrap_or(&response) == "null" {
             Ok(None)
         } else {
             let decoded: RawTxResponse = serde_json::from_str(&response)?;
@@ -206,7 +205,7 @@ impl ThorNode {
             .await?
             .text()
             .await?;
-        if response.strip_suffix("\n").unwrap_or(&response) == "null" {
+        if response.strip_suffix('\n').unwrap_or(&response) == "null" {
             Ok(None)
         } else {
             let decoded: Receipt = serde_json::from_str(&response)?;

@@ -27,13 +27,14 @@ itertools = "0.12.0"
 tiny-keccak = { version = "2.0.0", features = ["keccak"] }
 secp256k1 = { version = "0.27.0", features = [ "recovery" ] }
 tiny-bip39 = "1.0.0"
-rustc-hex = "2.1.0"
+rustc-hex = "2.1.0"  # TODO: replace with hex
 open-fastrlp = { version = "0.1.4", features = ["std", "ethereum-types"] }
 bytes = "1.5.0"
 reqwest = { version = "0.11", features = ["json"], optional = true }
 serde = { version = "^1.0", features=["derive"], optional = true }
-serde-hex = { version = "^0.1", optional = true }
 serde_json = { version = "^1.0", optional = true }
+serde_with = { version = "^3.4", features = ["hex"], optional = true }
+hex = { version = "^0.4", optional = true }
 
 [dev-dependencies]
 # version_sync: to ensure versions in `Cargo.toml` and `README.md` are in sync
@@ -43,5 +44,5 @@ tokio = { version = "1", features = ["full"] }
 
 [features]
 # default = ['http']
-serde = ["dep:serde", "dep:serde-hex", "dep:serde_json"]
+serde = ["dep:serde", "dep:serde_json", "dep:serde_with", "dep:hex"]
 http = ["dep:reqwest", "serde"]
