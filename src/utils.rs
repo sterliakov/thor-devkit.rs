@@ -24,6 +24,7 @@ pub fn keccak<S: AsRef<[u8]>>(bytes: S) -> [u8; 32] {
 
 #[cfg(feature = "serde")]
 pub(crate) mod unhex {
+    use rustc_hex::{FromHex, ToHex};
     use serde::de::Error;
     use serde::{Deserialize, Deserializer, Serializer};
     use serde_with::de::DeserializeAs;
@@ -36,27 +37,22 @@ pub(crate) mod unhex {
     #[derive(Copy, Clone, Debug, Default)]
     pub struct Hex<FORMAT: Format = Lowercase>(PhantomData<FORMAT>);
 
-    impl<T> SerializeAs<T> for Hex<Lowercase>
-    where
-        T: AsRef<[u8]>,
-    {
+    impl<T: ToHex> SerializeAs<T> for Hex<Lowercase> {
         fn serialize_as<S>(source: &T, serializer: S) -> Result<S::Ok, S::Error>
         where
             S: Serializer,
         {
-            serializer.serialize_str(&("0x".to_string() + &hex::encode(source)))
+            serializer.serialize_str(&("0x".to_string() + &source.to_hex::<String>()))
         }
     }
 
-    impl<T> SerializeAs<T> for Hex<Uppercase>
-    where
-        T: AsRef<[u8]>,
-    {
+    impl<T: ToHex> SerializeAs<T> for Hex<Uppercase> {
         fn serialize_as<S>(source: &T, serializer: S) -> Result<S::Ok, S::Error>
         where
             S: Serializer,
         {
-            serializer.serialize_str(&("0x".to_string() + &hex::encode_upper(source)))
+            serializer
+                .serialize_str(&("0x".to_string() + &source.to_hex::<String>().to_uppercase()))
         }
     }
 
@@ -68,7 +64,7 @@ pub(crate) mod unhex {
         fn deserialize_as<D: Deserializer<'de>>(deserializer: D) -> Result<T, D::Error> {
             <Cow<'de, str> as Deserialize<'de>>::deserialize(deserializer)
                 .and_then(|s| {
-                    hex::decode(s.strip_prefix("0x").unwrap_or(&s)).map_err(|e| {
+                    s.strip_prefix("0x").unwrap_or(&s).from_hex().map_err(|e| {
                         println!("{:?}", e);
                         Error::custom(e)
                     })
