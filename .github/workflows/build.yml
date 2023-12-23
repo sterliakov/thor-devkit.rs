@@ -6,10 +6,12 @@ on:
   pull_request:
     branches:
       - master
+  schedule:
+    - cron: "0 0 * * *"
 
 jobs:
-  build:
-    name: Build
+  clippy:
+    name: Clippy
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -17,9 +19,69 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
-      - name: Release build
-        run: cargo build --release --all-features
       - uses: giraffate/clippy-action@v1
         with:
           reporter: 'github-pr-review'
           github_token: ${{ secrets.GITHUB_TOKEN }}
+
+  build:
+    name: Build with rust ${{matrix.rust}} on ${{matrix.os == 'ubuntu' && 'Linux' || matrix.os == 'macos' && 'macOS' || matrix.os == 'windows' && 'Windows' || '???'}}
+    runs-on: ${{matrix.os}}-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        rust:
+          - "1.67.1"  # MSRV
+          - "stable"
+          - "beta"
+          - "nightly"
+        os: [ubuntu, windows, macos]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Stable with rustfmt and clippy
+        uses: dtolnay/rust-toolchain@master
+        with:
+          components: rustfmt, clippy
+          toolchain: ${{matrix.rust}}
+      - name: Release build
+        run: cargo build --release --all-features
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v3
+      - uses: pre-commit/action@v3.0.0
+
+      - name: Install stable toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-tarpaulin,cargo-rdme
+
+      - name: Check README is up-to-date
+        run: cargo rdme --check
+
+      - name: Run tests with coverage
+        run: RUST_BACKTRACE=1 cargo tarpaulin --out Xml --all-features
+
+      - name: Submit a transaction to chain
+        run: RUST_BACKTRACE=1 cargo run --example transaction_broadcast --all-features
+        env:
+          TEST_TO_ADDRESS: ${{ secrets.TO_ADDRESS }}
+          TEST_MNEMONIC: ${{ secrets.MNEMONIC }}
+
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v3
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+      - name: Archive code coverage results
+        uses: actions/upload-artifact@v4
+        with:
+          name: code-coverage-report
+          path: cobertura.xml
