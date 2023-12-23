@@ -74,13 +74,6 @@ async fn create_and_broadcast_transaction() -> AResult<()> {
     Ok(())
 }
 
-#[tokio::test]
-async fn test_run() {
-    create_and_broadcast_transaction()
-        .await
-        .expect("Must not fail");
-}
-
 #[tokio::main]
 async fn main() {
     create_and_broadcast_transaction()

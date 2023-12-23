@@ -6,10 +6,12 @@ on:
   pull_request:
     branches:
       - master
+  schedule:
+    - cron: "0 0 * * *"
 
 jobs:
-  build:
-    name: Build
+  clippy:
+    name: Clippy
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -17,9 +19,29 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
-      - name: Release build
-        run: cargo build --release --all-features
       - uses: giraffate/clippy-action@v1
         with:
           reporter: 'github-pr-review'
           github_token: ${{ secrets.GITHUB_TOKEN }}
+
+  build:
+    name: Build with rust ${{matrix.rust}} on ${{matrix.os == 'ubuntu' && 'Linux' || matrix.os == 'macos' && 'macOS' || matrix.os == 'windows' && 'Windows' || '???'}}
+    runs-on: ${{matrix.os}}-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        rust: [
+          "1.67.1",  # MSRV
+          "stable",
+          "beta",
+          "nightly",
+        ]
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Stable with rustfmt and clippy
+        uses: dtolnay/rust-toolchain@${{matrix.rust}}
+        with:
+          components: rustfmt, clippy
+      - name: Release build
+        run: cargo build --release --all-features
