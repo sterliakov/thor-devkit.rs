@@ -548,4 +548,150 @@ mod test_network {
             .expect("Must not fail");
         assert!(result.is_none());
     }
+
+    #[tokio::test]
+    async fn test_fake_execute_transfer_fail() {
+        let client = ThorNode::testnet();
+        let request = SimulateCallRequest {
+            clauses: vec![Clause {
+                to: Some(
+                    "0x5034aa590125b64023a0262112b98d72e3c8e40e"
+                        .parse()
+                        .unwrap(),
+                ),
+                value: (u128::MAX - 1).into(),
+                data: Bytes::copy_from_slice(&decode_hex("5665436861696e2054686f72")[..]),
+            }],
+            gas: 50000,
+            gas_price: 1000000000000000,
+            caller: "0x7a688eebfca7569e04bc9379a5378f5411ae8bec"
+                .parse()
+                .unwrap(),
+            proved_work: 1000,
+            gas_payer: "0x7a688eebfca7569e04bc9379a5378f5411ae8bec"
+                .parse()
+                .unwrap(),
+            expiration: 1000,
+            block_ref: 0x00000000851caf3c,
+        };
+        let result = client
+            .simulate_execution(request)
+            .await
+            .expect("Must not fail");
+        assert_eq!(
+            result,
+            vec![SimulateCallResponse {
+                data: Bytes::new(),
+                events: vec![],
+                transfers: vec![],
+                gas_used: 0,
+                reverted: true,
+                vm_error: "insufficient balance for transfer".to_string()
+            }]
+        );
+    }
+    #[tokio::test]
+    async fn test_fake_execute_transfer() {
+        let client = ThorNode::testnet();
+        let request = SimulateCallRequest {
+            clauses: vec![Clause {
+                to: Some(
+                    "0x8a688eebfca7569e04bc9379a5378f5411ae8bec"
+                        .parse()
+                        .unwrap(),
+                ),
+                value: 1000.into(),
+                data: Bytes::copy_from_slice(&decode_hex("5665436861696e2054686f72")[..]),
+            }],
+            gas: 50000,
+            gas_price: 1000000000000000,
+            caller: "0x7a688eebfca7569e04bc9379a5378f5411ae8bec"
+                .parse()
+                .unwrap(),
+            proved_work: 1000,
+            gas_payer: "0x7a688eebfca7569e04bc9379a5378f5411ae8bec"
+                .parse()
+                .unwrap(),
+            expiration: 1000,
+            block_ref: 0x00000000851caf3c,
+        };
+        let result = client
+            .simulate_execution(request)
+            .await
+            .expect("Must not fail");
+        assert_eq!(
+            result,
+            vec![SimulateCallResponse {
+                data: Bytes::new(),
+                events: vec![],
+                transfers: vec![Transfer {
+                    sender: "0x7a688eebfca7569e04bc9379a5378f5411ae8bec"
+                        .parse()
+                        .unwrap(),
+                    recipient: "0x8a688eebfca7569e04bc9379a5378f5411ae8bec"
+                        .parse()
+                        .unwrap(),
+                    amount: 1000.into(),
+                }],
+                gas_used: 0,
+                reverted: false,
+                vm_error: "".to_string()
+            }]
+        );
+    }
+
+    #[tokio::test]
+    async fn test_fake_execute_events() {
+        // TODO: This is just a random transaction from explorer. Do better.
+        let client = ThorNode::testnet();
+        let data = "b391c7d37674686f2d757364000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000008417191a00000000000000000000000000000000000000000000000000000000657f8e4a";
+        let request = SimulateCallRequest {
+            clauses: vec![Clause {
+                to: Some(
+                    "0x12E3582D7ca22234f39D2A7BE12C98ea9c077E25"
+                        .parse()
+                        .unwrap(),
+                ),
+                value: 0.into(),
+                data: Bytes::copy_from_slice(&decode_hex(data)[..]),
+            }],
+            gas: 50000,
+            gas_price: 1000000000000000,
+            caller: "0x56cB0E0276AD689Cc68954D47460cD70f46244DC"
+                .parse()
+                .unwrap(),
+            proved_work: 1000,
+            gas_payer: "0xeEdFd966Da350803Ba7fc8F40f6A3151164e2058"
+                .parse()
+                .unwrap(),
+            expiration: 1000,
+            block_ref: 0x00000000851caf3c,
+        };
+        let result = client
+            .simulate_execution(request)
+            .await
+            .expect("Must not fail");
+        let event_data = "7674686f2d757364000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000008417191a00000000000000000000000000000000000000000000000000000000657f8e4a";
+        assert_eq!(
+            result,
+            vec![SimulateCallResponse {
+                data: Bytes::new(),
+                events: vec![Event {
+                    address: "0x12e3582d7ca22234f39d2a7be12c98ea9c077e25"
+                        .parse()
+                        .unwrap(),
+                    topics: vec![decode_hex(
+                        "efc8f4041c0ba4d097e54bce7e5bc47ec5b45c0270c42379c4b691c85943edf0"
+                    )
+                    .try_into()
+                    .unwrap()],
+                    data: Bytes::copy_from_slice(&decode_hex(event_data)[..]),
+                }],
+                transfers: vec![],
+                gas_used: 15238,
+                reverted: false,
+                vm_error: "".to_string()
+            }]
+        );
+    }
 }

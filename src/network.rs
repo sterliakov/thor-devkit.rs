@@ -368,6 +368,56 @@ struct AccountStorageResponse {
     value: U256,
 }
 
+/// Transaction execution simulation request
+#[serde_with::serde_as]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct SimulateCallRequest {
+    /// Clauses of transaction
+    pub clauses: Vec<Clause>,
+    /// Maximal amount of gas
+    pub gas: u64,
+    /// Gas price
+    #[serde_as(as = "serde_with::DisplayFromStr")]
+    #[serde(rename = "gasPrice")]
+    pub gas_price: u64,
+    /// Caller address
+    pub caller: Address,
+    /// ???
+    #[serde_as(as = "serde_with::DisplayFromStr")]
+    #[serde(rename = "provedWork")]
+    pub proved_work: u64,
+    /// Gas payer address
+    #[serde(rename = "gasPayer")]
+    pub gas_payer: Address,
+    /// Expiration (in blocks)
+    pub expiration: u32,
+    /// Block reference to count expiration from.
+    #[serde_as(as = "unhex::HexNum<8, u64>")]
+    #[serde(rename = "blockRef")]
+    pub block_ref: u64,
+}
+
+/// Transaction execution simulation request
+#[serde_with::serde_as]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct SimulateCallResponse {
+    /// Output data
+    #[serde_as(as = "unhex::Hex")]
+    pub data: Bytes,
+    /// Emitted events
+    pub events: Vec<Event>,
+    /// Executed transfers
+    pub transfers: Vec<Transfer>,
+    /// Gas spent
+    #[serde(rename = "gasUsed")]
+    pub gas_used: u64,
+    /// Will be reverted?
+    pub reverted: bool,
+    /// Error description returned by VM
+    #[serde(rename = "vmError")]
+    pub vm_error: String,
+}
+
 impl ThorNode {
     /// Chain tag for mainnet
     pub const MAINNET_CHAIN_TAG: u8 = 0x4A;
@@ -587,5 +637,21 @@ impl ThorNode {
             .json::<AccountStorageResponse>()
             .await?;
         Ok(response.value)
+    }
+
+    pub async fn simulate_execution(
+        &self,
+        request: SimulateCallRequest,
+    ) -> AResult<Vec<SimulateCallResponse>> {
+        //! Simulate a transaction execution.
+        let client = Client::new();
+        let response = client
+            .post(self.base_url.join("/accounts/*")?)
+            .json(&request)
+            .send()
+            .await?
+            .json::<Vec<SimulateCallResponse>>()
+            .await?;
+        Ok(response)
     }
 }
