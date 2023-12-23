@@ -1,22 +1,29 @@
 //! VeChain address operations and verifications.
 
+use crate::rlp::{Decodable, Encodable, RLPError};
 use crate::utils::keccak;
-use alloy_rlp::{Decodable, Encodable};
 use ethereum_types::Address as WrappedAddress;
 pub use secp256k1::{PublicKey, SecretKey as PrivateKey};
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 use std::{
     ops::{Deref, DerefMut},
     result::Result,
     str::FromStr,
 };
 
+#[cfg_attr(feature = "serde", serde_with::serde_as)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", serde(remote = "ethereum_types::H160"))]
+struct _Address(#[cfg_attr(feature = "serde", serde_as(as = "crate::utils::unhex::Hex"))] [u8; 20]);
+
 /// VeChain address.
+#[cfg_attr(feature = "serde", serde_with::serde_as)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct Address(WrappedAddress);
+pub struct Address(#[cfg_attr(feature = "serde", serde_as(as = "_Address"))] WrappedAddress);
 
 impl DerefMut for Address {
-    // type Target = WrappedAddress;
-
     fn deref_mut(&mut self) -> &mut WrappedAddress {
         &mut self.0
     }
@@ -29,18 +36,18 @@ impl Deref for Address {
     }
 }
 impl Encodable for Address {
-    fn encode(&self, out: &mut dyn alloy_rlp::BufMut) {
-        use crate::transactions::lstrip;
-        alloy_rlp::Bytes::copy_from_slice(&lstrip(self.0)).encode(out)
+    fn encode(&self, out: &mut dyn open_fastrlp::BufMut) {
+        use crate::rlp::lstrip;
+        bytes::Bytes::copy_from_slice(&lstrip(self.0)).encode(out)
     }
 }
 impl Decodable for Address {
-    fn decode(buf: &mut &[u8]) -> Result<Self, alloy_rlp::Error> {
-        use crate::transactions::static_left_pad;
-        let bytes = alloy_rlp::Bytes::decode(buf)?;
+    fn decode(buf: &mut &[u8]) -> Result<Self, RLPError> {
+        use crate::rlp::static_left_pad;
+        let bytes = bytes::Bytes::decode(buf)?;
         Ok(Self(WrappedAddress::from_slice(
             &static_left_pad::<20>(&bytes).map_err(|e| match e {
-                alloy_rlp::Error::Overflow => alloy_rlp::Error::ListLengthMismatch {
+                RLPError::Overflow => RLPError::ListLengthMismatch {
                     expected: Self::WIDTH,
                     got: bytes.len(),
                 },
@@ -101,13 +108,4 @@ impl AddressConvertible for secp256k1::PublicKey {
         let suffix: [u8; 20] = hash[12..32].try_into().expect("Preset slice length");
         Address(WrappedAddress::from_slice(&suffix))
     }
-}
-
-/// Invalid public key format reasons
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub enum AddressValidationError {
-    /// Not of length 20
-    InvalidLength,
-    /// Not a hex string
-    InvalidHex,
 }

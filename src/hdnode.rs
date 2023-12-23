@@ -1,6 +1,10 @@
-//! VeChain-tailored Hierarchically deterministic nodes support
+//! VeChain-tailored hierarchically deterministic nodes support
 //!
-//! `Reference <https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki>`
+//! [In-deep explanation](https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki)
+//!
+//! This module glues together several important components involved in key derivation
+//! from different sources. You can construct an [`HDNode`] in multiple ways, allowing,
+//! for example, generating a private key from mnemonic or generating a random key.
 
 use bip32::{
     ChainCode, ChildNumber, DerivationPath, ExtendedKey, ExtendedKeyAttrs, ExtendedPrivateKey,
@@ -22,6 +26,9 @@ enum HDNodeVariant {
 use HDNodeVariant::{Full, Restricted};
 
 /// Hierarchically deterministic node.
+///
+/// To construct a wallet, use the [`HDNode::build`] method. It exposes access to the builder
+/// that supports multiple construction methods and validates the arguments.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct HDNode(HDNodeVariant);
 
@@ -41,14 +48,14 @@ impl HDNode {
     }
 
     pub fn public_key(&self) -> ExtendedPublicKey<PublicKey> {
-        //! Get underlying public key.
+        //! Get underlying extended public key.
         match &self.0 {
             Full(privkey) => privkey.public_key(),
             Restricted(pubkey) => pubkey.clone(),
         }
     }
     pub fn private_key(&self) -> Result<ExtendedPrivateKey<PrivateKey>, HDNodeError> {
-        //! Get underlying private key.
+        //! Get underlying extended private key.
         match &self.0 {
             Full(privkey) => Ok(privkey.clone()),
             Restricted(_) => Err(HDNodeError::Crypto),
@@ -140,6 +147,36 @@ impl From<bip32::Error> for HDNodeError {
 }
 
 /// Builder for HDNode: use this to construct a node from different sources.
+///
+/// The following sources are supported:
+/// - Binary seed. 64 bytes of raw entropy to use for key generation.
+/// - [BIP39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) mnemonic
+///   with optional password. This method is compatible with derivation in Sync2 wallet.
+/// - Master private key bytes and chain code
+/// - Extended private key
+/// - Master public key bytes and chain code
+/// - Extended public key
+///
+/// First two methods accept a derivation path to use (defaults to VeChain path).
+///
+/// For example, here's what you could do:
+///
+/// ```rust
+/// use thor_devkit::hdnode::{Mnemonic, Language, HDNode};
+/// use rand::RngCore;
+/// use rand::rngs::OsRng;
+///
+/// let mnemonic = Mnemonic::from_phrase(
+///     "ignore empty bird silly journey junior ripple have guard waste between tenant",
+///     Language::English,
+/// )
+/// .expect("Should be constructible");
+/// let wallet = HDNode::build().mnemonic(mnemonic).build().expect("Must be buildable");
+/// // OR
+/// let mut entropy = [0u8; 64];
+/// OsRng.fill_bytes(&mut entropy);
+/// let other_wallet = HDNode::build().seed(entropy).build().expect("Must be buildable");
+/// ```
 #[derive(Clone, Default)]
 pub struct HDNodeBuilder<'a> {
     path: Option<DerivationPath>,
@@ -211,7 +248,9 @@ impl<'a> HDNodeBuilder<'a> {
     ) -> Self {
         //! Create an HDNode from private key bytes and chain code.
         //!
+        //! <div class="warning">
         //! Beware that this node cannot be used to derive new private keys.
+        //! </div>
         self.ext_pubkey = Some(ExtendedKey {
             prefix: Prefix::XPUB,
             attrs: ExtendedKeyAttrs {
@@ -227,7 +266,9 @@ impl<'a> HDNodeBuilder<'a> {
     pub fn public_key(mut self, ext_key: ExtendedKey) -> Self {
         //! Create an HDNode from extended public key structure.
         //!
+        //! <div class="warning">
         //! Beware that this node cannot be used to derive new private keys.
+        //! </div>
         self.ext_pubkey = Some(ext_key);
         self
     }

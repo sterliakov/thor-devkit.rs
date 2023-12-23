@@ -83,9 +83,9 @@ Check out the [Contributing][] section in the docs for more info.
 
 ### License
 
-This project is proudly licensed under the GNU General Public License v3 ([LICENSE](LICENSE)).
+This project is proudly licensed under the Lesser GNU General Public License v3 ([LICENSE](https://github.com/sterliakov/thor-devkit.rs/blob/master/LICENSE)).
 
-`thor-devkit` can be distributed according to the GNU General Public License v3. Contributions
+`thor-devkit` can be distributed according to the Lesser GNU General Public License v3. Contributions
 will be accepted under the same license.
 
 <!-- cargo-rdme end -->

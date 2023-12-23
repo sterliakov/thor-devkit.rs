@@ -10,15 +10,13 @@ Possible header types:
 - `Breaking Changes` for any backwards-incompatible changes.
 
 ## [Unreleased]
-<!--
-### Features
-- Added a new struct `MyStruct` with the following methods:
-  - `my_method()`
-  - `other_method()`
--->
 
-## v0.0.1 (2023-10-01)
+### Features
+- Made RLP encoding components public and rewrite it with more conscious syntax.
+- Added network support for Transaction and Block retrieval.
+
+## v0.0.1-alpha.1 (2023-10-01)
 
 - Initial Release on [crates.io] :tada:
 
-[crates.io]: https://crates.io/crates/thor-devkit.rs
+[crates.io]: https://crates.io/crates/thor-devkit
