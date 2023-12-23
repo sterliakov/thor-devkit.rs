@@ -2,18 +2,31 @@
 
 use crate::rlp::{Bytes, Decodable};
 use crate::transactions::Reserved;
+use crate::transactions::{Clause, Transaction};
 use crate::utils::unhex;
-use crate::U256;
-use crate::{
-    transactions::{Clause, Transaction},
-    Address,
-};
+use crate::{Address, U256};
 use reqwest::{Client, Url};
 use rustc_hex::ToHex;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 /// Generic result of all asynchronous calls in this module.
 pub type AResult<T> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>>;
+
+/// Validation errors (not related to HTTP failures)
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum ValidationError {
+    /// Account storage keys start from one, there's no key 0.
+    ZeroStorageKey,
+}
+
+impl std::error::Error for ValidationError {}
+impl std::fmt::Display for ValidationError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::ZeroStorageKey => f.write_str("Account storage key cannot be zero"),
+        }
+    }
+}
 
 /// 256-byte binary sequence (usually a hash of something)
 pub type Hash256 = [u8; 32];
@@ -35,7 +48,7 @@ struct RawTxResponse {
 
 /// Extended transaction data
 #[serde_with::serde_as]
-#[derive(Clone, Debug, PartialEq, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct ExtendedTransaction {
     /// Identifier of the transaction
     #[serde_as(as = "unhex::Hex")]
@@ -115,7 +128,7 @@ struct ExtendedTransactionResponse {
 
 /// Transaction metadata
 #[serde_with::serde_as]
-#[derive(Clone, Debug, Eq, PartialEq, Deserialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct TransactionMeta {
     /// Block identifier
     #[serde(rename = "blockID")]
@@ -130,7 +143,7 @@ pub struct TransactionMeta {
 }
 
 /// Transaction receipt
-#[derive(Clone, Debug, PartialEq, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Receipt {
     /// Amount of gas consumed by this transaction
     #[serde(rename = "gasUsed")]
@@ -156,7 +169,7 @@ struct ReceiptResponse {
 }
 
 /// Single output in the transaction receipt
-#[derive(Clone, Debug, PartialEq, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct ReceiptOutput {
     /// Deployed contract address, if the corresponding clause is a contract deployment clause
     #[serde(rename = "contractAddress")]
@@ -169,7 +182,7 @@ pub struct ReceiptOutput {
 
 /// Transaction receipt metadata
 #[serde_with::serde_as]
-#[derive(Clone, Debug, PartialEq, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct ReceiptMeta {
     /// Block identifier
     #[serde(rename = "blockID")]
@@ -192,7 +205,7 @@ pub struct ReceiptMeta {
 
 /// Emitted contract event
 #[serde_with::serde_as]
-#[derive(Clone, Debug, PartialEq, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Event {
     /// The address of contract which produces the event
     pub address: Address,
@@ -205,7 +218,7 @@ pub struct Event {
 }
 
 /// Single transfer during the contract call
-#[derive(Clone, Debug, PartialEq, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Transfer {
     /// Address that sends tokens
     pub sender: Address,
@@ -217,7 +230,7 @@ pub struct Transfer {
 
 /// A blockchain block.
 #[serde_with::serde_as]
-#[derive(Clone, Debug, PartialEq, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct BlockInfo {
     /// Block number (height)
     pub number: u32,
@@ -273,7 +286,7 @@ pub struct BlockInfo {
 /// Transaction data included in the block extended details.
 ///
 /// Combines [`ExtendedTransaction`] and [`Receipt`].
-#[derive(Clone, Debug, PartialEq, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct BlockTransaction {
     /// Transaction details
     #[serde(flatten)]
@@ -325,6 +338,84 @@ impl BlockReference {
             }
         }
     }
+}
+
+/// Account details
+#[serde_with::serde_as]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct AccountInfo {
+    /// VET balance
+    #[serde_as(as = "unhex::HexNum<32, U256>")]
+    pub balance: U256,
+    /// VTHO balance
+    #[serde_as(as = "unhex::HexNum<32, U256>")]
+    pub energy: U256,
+    /// Is a contract?
+    #[serde(rename = "hasCode")]
+    pub has_code: bool,
+}
+
+#[serde_with::serde_as]
+#[derive(Clone, Debug, PartialEq, Deserialize)]
+struct AccountCodeResponse {
+    #[serde_as(as = "unhex::Hex")]
+    code: Bytes,
+}
+#[serde_with::serde_as]
+#[derive(Clone, Debug, PartialEq, Deserialize)]
+struct AccountStorageResponse {
+    #[serde_as(as = "unhex::HexNum<32, U256>")]
+    value: U256,
+}
+
+/// Transaction execution simulation request
+#[serde_with::serde_as]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct SimulateCallRequest {
+    /// Clauses of transaction
+    pub clauses: Vec<Clause>,
+    /// Maximal amount of gas
+    pub gas: u64,
+    /// Gas price
+    #[serde_as(as = "serde_with::DisplayFromStr")]
+    #[serde(rename = "gasPrice")]
+    pub gas_price: u64,
+    /// Caller address
+    pub caller: Address,
+    /// ???
+    #[serde_as(as = "serde_with::DisplayFromStr")]
+    #[serde(rename = "provedWork")]
+    pub proved_work: u64,
+    /// Gas payer address
+    #[serde(rename = "gasPayer")]
+    pub gas_payer: Address,
+    /// Expiration (in blocks)
+    pub expiration: u32,
+    /// Block reference to count expiration from.
+    #[serde_as(as = "unhex::HexNum<8, u64>")]
+    #[serde(rename = "blockRef")]
+    pub block_ref: u64,
+}
+
+/// Transaction execution simulation request
+#[serde_with::serde_as]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct SimulateCallResponse {
+    /// Output data
+    #[serde_as(as = "unhex::Hex")]
+    pub data: Bytes,
+    /// Emitted events
+    pub events: Vec<Event>,
+    /// Executed transfers
+    pub transfers: Vec<Transfer>,
+    /// Gas spent
+    #[serde(rename = "gasUsed")]
+    pub gas_used: u64,
+    /// Will be reverted?
+    pub reverted: bool,
+    /// Error description returned by VM
+    #[serde(rename = "vmError")]
+    pub vm_error: String,
 }
 
 impl ThorNode {
@@ -497,5 +588,70 @@ impl ThorNode {
             .send()
             .await?;
         Ok(())
+    }
+
+    pub async fn fetch_account(&self, address: Address) -> AResult<AccountInfo> {
+        //! Retrieve account details.
+        let client = Client::new();
+        let path = format!("/accounts/{}", address.to_hex());
+        Ok(client
+            .get(self.base_url.join(&path)?)
+            .send()
+            .await?
+            .json::<AccountInfo>()
+            .await?)
+    }
+
+    pub async fn fetch_account_code(&self, address: Address) -> AResult<Option<Bytes>> {
+        //! Retrieve account code.
+        //!
+        //! Returns [`None`] for non-contract accounts.
+        let client = Client::new();
+        let path = format!("/accounts/{}/code", address.to_hex());
+        let response = client
+            .get(self.base_url.join(&path)?)
+            .send()
+            .await?
+            .json::<AccountCodeResponse>()
+            .await?;
+        if response.code.is_empty() {
+            Ok(None)
+        } else {
+            Ok(Some(response.code))
+        }
+    }
+
+    pub async fn fetch_account_storage(&self, address: Address, key: U256) -> AResult<U256> {
+        //! Retrieve account storage at key.
+        //!
+        //! Returns [`None`] for non-contract accounts or for missing storage keys.
+        if key == 0.into() {
+            return Err(Box::new(ValidationError::ZeroStorageKey));
+        }
+        let client = Client::new();
+        let path = format!("/accounts/{}/storage/0x{:064x}", address.to_hex(), key);
+        let response = client
+            .get(self.base_url.join(&path)?)
+            .send()
+            .await?
+            .json::<AccountStorageResponse>()
+            .await?;
+        Ok(response.value)
+    }
+
+    pub async fn simulate_execution(
+        &self,
+        request: SimulateCallRequest,
+    ) -> AResult<Vec<SimulateCallResponse>> {
+        //! Simulate a transaction execution.
+        let client = Client::new();
+        let response = client
+            .post(self.base_url.join("/accounts/*")?)
+            .json(&request)
+            .send()
+            .await?
+            .json::<Vec<SimulateCallResponse>>()
+            .await?;
+        Ok(response)
     }
 }

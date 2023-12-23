@@ -73,10 +73,15 @@ impl Address {
     /// Size of underlying array in bytes.
     pub const WIDTH: usize = 20;
 
+    pub fn to_hex(&self) -> String {
+        //! Encode as a hex string with `0x` prefix.
+        format!("{:02x?}", self.0)
+    }
+
     pub fn to_checksum_address(&self) -> String {
         //! Create a checksum address
 
-        let body = format!("{:02x?}", self.0);
+        let body = self.to_hex();
         let hash = keccak(&body.clone()[2..42]);
 
         "0x".chars()
