@@ -35,7 +35,8 @@ impl std::fmt::Display for ValidationError {
 
 /// A simple HTTP REST client for a VeChain node.
 pub struct ThorNode {
-    base_url: Url,
+    /// API base url
+    pub base_url: Url,
     /// Chain tag used for this network.
     pub chain_tag: u8,
 }
