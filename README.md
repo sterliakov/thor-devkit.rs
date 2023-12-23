@@ -2,8 +2,7 @@
 
 [![Crates.io](https://img.shields.io/crates/v/thor-devkit?logo=rust)](https://crates.io/crates/thor-devkit)
 [![docs.rs](https://img.shields.io/docsrs/thor-devkit)](https://docs.rs/thor-devkit)
-[![Build](https://img.shields.io/github/actions/workflow/status/sterliakov/thor-devkit.rs/build.yml?logo=github)](https://github.com/sterliakov/thor-devkit.rs/actions?query=branch%3Amaster&workflow%3abuild)
-[![Test](https://img.shields.io/github/actions/workflow/status/sterliakov/thor-devkit.rs/test.yml?logo=github&label=test)](https://github.com/sterliakov/thor-devkit.rs/actions?query=branch%3Amaster&workflow%3atest)
+[![Test](https://img.shields.io/github/actions/workflow/status/sterliakov/thor-devkit.rs/build.yml?logo=github)](https://github.com/sterliakov/thor-devkit.rs/actions?query=branch%3Amaster&workflow%3abuild)
 [![Codecov](https://img.shields.io/codecov/c/github/sterliakov/thor-devkit.rs)](https://app.codecov.io/gh/sterliakov/thor-devkit.rs)
 
 <!-- cargo-rdme start -->
