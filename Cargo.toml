@@ -26,7 +26,7 @@ blake2 = "0.10.6"
 ethereum-types = "0.14.0"
 itertools = "0.12.0"
 tiny-keccak = { version = "2.0.0", features = ["keccak"] }
-secp256k1 = { version = "0.27.0", features = [ "recovery" ] }
+secp256k1 = { version = "0.28.0", features = [ "recovery" ] }
 tiny-bip39 = "1.0.0"
 rustc-hex = "2.1.0"
 open-fastrlp = { version = "0.1.4", features = ["std", "ethereum-types"] }
