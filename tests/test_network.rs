@@ -408,6 +408,78 @@ mod test_network {
     }
 
     #[tokio::test]
+    async fn test_fetch_account() {
+        let client = ThorNode::testnet();
+        let info = client
+            .fetch_account(
+                "0x12e3582d7ca22234f39d2a7be12c98ea9c077e25"
+                    .parse()
+                    .unwrap(),
+            )
+            .await
+            .expect("Must not fail");
+        assert!(info.has_code);
+    }
+
+    #[tokio::test]
+    async fn test_fetch_account_code() {
+        let client = ThorNode::testnet();
+        let code = client
+            .fetch_account_code(
+                "0x12e3582d7ca22234f39d2a7be12c98ea9c077e25"
+                    .parse()
+                    .unwrap(),
+            )
+            .await
+            .expect("Must not fail");
+        assert!(code.is_some());
+    }
+
+    #[tokio::test]
+    async fn test_fetch_account_code_not_contract() {
+        let client = ThorNode::testnet();
+        let code = client
+            .fetch_account_code(
+                "0x12e3582d7ca22234f39d2a7be12c98ea9c078e25"
+                    .parse()
+                    .unwrap(),
+            )
+            .await
+            .expect("Must not fail");
+        assert!(code.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_fetch_account_storage_not_found() {
+        let client = ThorNode::testnet();
+        let code = client
+            .fetch_account_storage(
+                "0x12e3582d7ca22234f39d2a7be12c98ea9c077e25"
+                    .parse()
+                    .unwrap(),
+                1.into(),
+            )
+            .await
+            .expect("Must not fail");
+        assert!(code == 0.into());
+    }
+
+    #[tokio::test]
+    async fn test_fetch_account_storage_at_zero_rejects() {
+        let client = ThorNode::testnet();
+        let err = client
+            .fetch_account_storage(
+                "0x12e3582d7ca22234f39d2a7be12c98ea9c077e25"
+                    .parse()
+                    .unwrap(),
+                0.into(),
+            )
+            .await
+            .expect_err("Must fail");
+        assert_eq!(err.to_string(), "Account storage key cannot be zero");
+    }
+
+    #[tokio::test]
     async fn test_fetch_nonexisting() {
         let client = ThorNode::testnet();
         let result = client
