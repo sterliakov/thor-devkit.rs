@@ -89,7 +89,7 @@ impl HDNode {
             Restricted(pubkey) => pubkey.attrs().depth,
         }
     }
-    pub fn address(self) -> crate::address::Address {
+    pub fn address(&self) -> crate::address::Address {
         //! Get the address of current node.
         use crate::address::AddressConvertible;
 

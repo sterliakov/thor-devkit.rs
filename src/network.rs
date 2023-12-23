@@ -6,7 +6,6 @@ use crate::transactions::{Clause, Transaction};
 use crate::utils::unhex;
 use crate::{Address, U256};
 use reqwest::{Client, Url};
-use rustc_hex::ToHex;
 use serde::{Deserialize, Serialize};
 
 /// Generic result of all asynchronous calls in this module.
@@ -17,6 +16,8 @@ pub type AResult<T> = std::result::Result<T, Box<dyn std::error::Error + Send + 
 pub enum ValidationError {
     /// Account storage keys start from one, there's no key 0.
     ZeroStorageKey,
+    /// Transaction broadcast failed
+    BroadcastFailed(String),
 }
 
 impl std::error::Error for ValidationError {}
@@ -24,18 +25,19 @@ impl std::fmt::Display for ValidationError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::ZeroStorageKey => f.write_str("Account storage key cannot be zero"),
+            Self::BroadcastFailed(text) => {
+                f.write_str("Failed to broadcast: ")?;
+                f.write_str(text)
+            }
         }
     }
 }
 
-/// 256-byte binary sequence (usually a hash of something)
-pub type Hash256 = [u8; 32];
-
 /// A simple HTTP REST client for a VeChain node.
 pub struct ThorNode {
     base_url: Url,
-    #[allow(dead_code)]
-    chain_tag: u8,
+    /// Chain tag used for this network.
+    pub chain_tag: u8,
 }
 
 #[serde_with::serde_as]
@@ -51,8 +53,8 @@ struct RawTxResponse {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct ExtendedTransaction {
     /// Identifier of the transaction
-    #[serde_as(as = "unhex::Hex")]
-    pub id: Hash256,
+    #[serde_as(as = "unhex::HexNum<32, U256>")]
+    pub id: U256,
     /// The one who signed the transaction
     pub origin: Address,
     /// The delegator who paid the gas fee
@@ -132,8 +134,8 @@ struct ExtendedTransactionResponse {
 pub struct TransactionMeta {
     /// Block identifier
     #[serde(rename = "blockID")]
-    #[serde_as(as = "unhex::Hex")]
-    pub block_id: Hash256,
+    #[serde_as(as = "unhex::HexNum<32, U256>")]
+    pub block_id: U256,
     /// Block number (height)
     #[serde(rename = "blockNumber")]
     pub block_number: u32,
@@ -186,8 +188,8 @@ pub struct ReceiptOutput {
 pub struct ReceiptMeta {
     /// Block identifier
     #[serde(rename = "blockID")]
-    #[serde_as(as = "unhex::Hex")]
-    pub block_id: Hash256,
+    #[serde_as(as = "unhex::HexNum<32, U256>")]
+    pub block_id: U256,
     /// Block number (height)
     #[serde(rename = "blockNumber")]
     pub block_number: u32,
@@ -196,8 +198,8 @@ pub struct ReceiptMeta {
     pub block_timestamp: u32,
     /// Transaction identifier
     #[serde(rename = "txID")]
-    #[serde_as(as = "unhex::Hex")]
-    pub tx_id: Hash256,
+    #[serde_as(as = "unhex::HexNum<32, U256>")]
+    pub tx_id: U256,
     /// Transaction origin (signer)
     #[serde(rename = "txOrigin")]
     pub tx_origin: Address,
@@ -210,8 +212,8 @@ pub struct Event {
     /// The address of contract which produces the event
     pub address: Address,
     /// Event topics
-    #[serde_as(as = "Vec<unhex::Hex>")]
-    pub topics: Vec<Hash256>,
+    #[serde_as(as = "Vec<unhex::HexNum<32, U256>>")]
+    pub topics: Vec<U256>,
     /// Event data
     #[serde_as(as = "unhex::Hex")]
     pub data: Bytes,
@@ -235,14 +237,14 @@ pub struct BlockInfo {
     /// Block number (height)
     pub number: u32,
     /// Block identifier
-    #[serde_as(as = "unhex::Hex")]
-    pub id: Hash256,
+    #[serde_as(as = "unhex::HexNum<32, U256>")]
+    pub id: U256,
     /// RLP encoded block size in bytes
     pub size: u32,
     /// Parent block ID
-    #[serde_as(as = "unhex::Hex")]
+    #[serde_as(as = "unhex::HexNum<32, U256>")]
     #[serde(rename = "parentID")]
-    pub parent_id: Hash256,
+    pub parent_id: U256,
     /// Block unix timestamp
     pub timestamp: u32,
     /// Block gas limit (max allowed accumulative gas usage of transactions)
@@ -257,20 +259,20 @@ pub struct BlockInfo {
     #[serde(rename = "totalScore")]
     pub total_score: u32,
     /// Root hash of transactions in the block
-    #[serde_as(as = "unhex::Hex")]
+    #[serde_as(as = "unhex::HexNum<32, U256>")]
     #[serde(rename = "txsRoot")]
-    pub txs_root: Hash256,
+    pub txs_root: U256,
     /// Supported txs features bitset
     #[serde(rename = "txsFeatures")]
     pub txs_features: u32,
     /// Root hash of accounts state
-    #[serde_as(as = "unhex::Hex")]
+    #[serde_as(as = "unhex::HexNum<32, U256>")]
     #[serde(rename = "stateRoot")]
-    pub state_root: Hash256,
+    pub state_root: U256,
     /// Root hash of transaction receipts
-    #[serde_as(as = "unhex::Hex")]
+    #[serde_as(as = "unhex::HexNum<32, U256>")]
     #[serde(rename = "receiptsRoot")]
-    pub receipts_root: Hash256,
+    pub receipts_root: U256,
     /// Is in trunk?
     #[serde(rename = "isTrunk")]
     pub is_trunk: bool,
@@ -301,8 +303,8 @@ pub struct BlockTransaction {
 struct BlockResponse {
     #[serde(flatten)]
     base: BlockInfo,
-    #[serde_as(as = "Vec<unhex::Hex>")]
-    transactions: Vec<Hash256>,
+    #[serde_as(as = "Vec<unhex::HexNum<32, U256>>")]
+    transactions: Vec<U256>,
 }
 
 #[serde_with::serde_as]
@@ -323,7 +325,7 @@ pub enum BlockReference {
     /// Block ordinal number (1..)
     Number(u64),
     /// Block ID
-    ID(Hash256),
+    ID(U256),
 }
 
 impl BlockReference {
@@ -332,10 +334,7 @@ impl BlockReference {
             BlockReference::Best => "best".to_string(),
             BlockReference::Finalized => "finalized".to_string(),
             BlockReference::Number(num) => format!("0x{:02x}", num),
-            BlockReference::ID(id) => {
-                let hex: String = id.to_hex();
-                format!("0x{}", hex)
-            }
+            BlockReference::ID(id) => format!("0x{:064x}", id),
         }
     }
 }
@@ -366,6 +365,18 @@ struct AccountCodeResponse {
 struct AccountStorageResponse {
     #[serde_as(as = "unhex::HexNum<32, U256>")]
     value: U256,
+}
+#[serde_with::serde_as]
+#[derive(Clone, Debug, PartialEq, Serialize)]
+struct TransactionBroadcastRequest {
+    #[serde_as(as = "unhex::Hex")]
+    raw: Bytes,
+}
+#[serde_with::serde_as]
+#[derive(Clone, Debug, PartialEq, Deserialize)]
+struct TransactionIdResponse {
+    #[serde_as(as = "unhex::HexNum<32, U256>")]
+    id: U256,
 }
 
 /// Transaction execution simulation request
@@ -446,7 +457,7 @@ impl ThorNode {
 
     pub async fn fetch_transaction(
         &self,
-        transaction_id: Hash256,
+        transaction_id: U256,
     ) -> AResult<Option<(Transaction, Option<TransactionMeta>)>> {
         //! Retrieve a [`Transaction`] from node by its ID.
         //!
@@ -459,8 +470,7 @@ impl ThorNode {
         //! from other parts of library. You can get more info from node
         //! with [`ThorNode::fetch_extended_transaction`].
         let client = Client::new();
-        let hex_id: String = transaction_id.to_hex();
-        let path = format!("/transactions/0x{}", hex_id);
+        let path = format!("/transactions/0x{:064x}", transaction_id);
         let response = client
             .get(self.base_url.join(&path)?)
             .query(&[("raw", "true")])
@@ -479,7 +489,7 @@ impl ThorNode {
 
     pub async fn fetch_extended_transaction(
         &self,
-        transaction_id: Hash256,
+        transaction_id: U256,
     ) -> AResult<Option<(ExtendedTransaction, Option<TransactionMeta>)>> {
         //! Retrieve a [`Transaction`] from node by its ID.
         //!
@@ -491,8 +501,7 @@ impl ThorNode {
         //! This method returns more data than [`ThorNode::fetch_transaction`],
         //! but is not interoperable with [`Transaction`].
         let client = Client::new();
-        let hex_id: String = transaction_id.to_hex();
-        let path = format!("/transactions/0x{}", hex_id);
+        let path = format!("/transactions/0x{:064x}", transaction_id);
         let response = client
             .get(self.base_url.join(&path)?)
             .send()
@@ -509,14 +518,13 @@ impl ThorNode {
 
     pub async fn fetch_transaction_receipt(
         &self,
-        transaction_id: Hash256,
+        transaction_id: U256,
     ) -> AResult<Option<(Receipt, ReceiptMeta)>> {
         //! Retrieve a transaction receipt from node given a transaction ID.
         //!
         //! Returns [`None`] for nonexistent or not mined transactions.
         let client = Client::new();
-        let hex_id: String = transaction_id.to_hex();
-        let path = format!("/transactions/0x{}/receipt", hex_id);
+        let path = format!("/transactions/0x{:064x}/receipt", transaction_id);
         let response = client
             .get(self.base_url.join(&path)?)
             .send()
@@ -534,7 +542,7 @@ impl ThorNode {
     pub async fn fetch_block(
         &self,
         block_ref: BlockReference,
-    ) -> AResult<Option<(BlockInfo, Vec<Hash256>)>> {
+    ) -> AResult<Option<(BlockInfo, Vec<U256>)>> {
         //! Retrieve a block from node by given identifier.
         //!
         //! Returns [`None`] for nonexistent blocks.
@@ -579,15 +587,21 @@ impl ThorNode {
         }
     }
 
-    pub async fn broadcast_transaction(&self, transaction: &Transaction) -> AResult<()> {
+    pub async fn broadcast_transaction(&self, transaction: &Transaction) -> AResult<U256> {
         //! Broadcast a new [`Transaction`] to the node.
         let client = Client::new();
-        client
-            .post(self.base_url.join("/transactions/")?)
-            .body(transaction.to_broadcastable_bytes()?)
+        let response = client
+            .post(self.base_url.join("/transactions")?)
+            .json(&TransactionBroadcastRequest {
+                raw: transaction.to_broadcastable_bytes()?,
+            })
             .send()
+            .await?
+            .text()
             .await?;
-        Ok(())
+        let decoded: TransactionIdResponse = serde_json::from_str(&response)
+            .map_err(|_| ValidationError::BroadcastFailed(response.to_string()))?;
+        Ok(decoded.id)
     }
 
     pub async fn fetch_account(&self, address: Address) -> AResult<AccountInfo> {
