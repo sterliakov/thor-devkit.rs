@@ -9,18 +9,18 @@ Possible header types:
 - `Bug Fixes` for any bug fixes.
 - `Breaking Changes` for any backwards-incompatible changes.
 
-## v0.0.1-beta.2 (2023-12-23)
+## v0.1.0-beta.2 (2023-12-23)
 
 ### Bug Fixes
 - HTTP node public url made public to allow alternative URLs
 -
-## v0.0.1-beta.1 (2023-12-23)
+## v0.1.0-beta.1 (2023-12-23)
 
 ### Features
 - Made RLP encoding components public and rewrite it with more conscious syntax.
 - Added network support for Transaction, Account and Block retrieval.
 
-## v0.0.1-alpha.1 (2023-10-01)
+## v0.1.0-alpha.1 (2023-10-01)
 
 - Initial Release on [crates.io] :tada:
 
