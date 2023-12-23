@@ -15,7 +15,7 @@ use std::{
 #[cfg_attr(feature = "serde", serde_with::serde_as)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(remote = "ethereum_types::H160"))]
-struct _Address(#[cfg_attr(feature = "serde", serde_as(as = "unhex::Hex"))] [u8; 20]);
+struct _Address(#[cfg_attr(feature = "serde", serde_as(as = "crate::utils::unhex::Hex"))] [u8; 20]);
 
 /// VeChain address.
 #[cfg_attr(feature = "serde", serde_with::serde_as)]

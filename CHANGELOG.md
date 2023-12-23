@@ -13,6 +13,7 @@ Possible header types:
 
 ### Features
 - Made RLP encoding components public and rewrite it with more conscious syntax.
+- Added network support for Transaction and Block retrieval.
 
 ## v0.0.1-alpha.1 (2023-10-01)
 

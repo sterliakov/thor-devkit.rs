@@ -42,6 +42,6 @@ rand = { version = "0.8.5", features = ["getrandom"] }
 tokio = { version = "1", features = ["full"] }
 
 [features]
-# default = ['http']
+default = ['http']
 serde = ["dep:serde", "dep:serde_json", "dep:serde_with"]
 http = ["dep:reqwest", "serde"]

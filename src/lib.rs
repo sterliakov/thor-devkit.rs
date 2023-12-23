@@ -89,8 +89,6 @@ pub mod hdnode;
 pub mod network;
 pub mod rlp;
 pub mod transactions;
-#[cfg(feature = "http")]
-pub use network::ThorNode;
 mod utils;
 pub use ethereum_types::U256;
 pub use rustc_hex::FromHexError as AddressValidationError;
