@@ -14,7 +14,7 @@ mod test_network {
     use super::*;
     use thor_devkit::network::*;
     use thor_devkit::rlp::Bytes;
-    use thor_devkit::transactions::*;
+    use thor_devkit::transactions::{Transaction, *};
 
     fn existing_tx_id() -> U256 {
         decode_u256("ea4c3d8b830f777ae55052bd92f2c65ae9f6c36eb391ac52e8e77d5d2bf5f308")
@@ -668,6 +668,22 @@ mod test_network {
                 reverted: false,
                 vm_error: "".to_string()
             }]
+        );
+    }
+
+    #[tokio::test]
+    async fn test_broadcast_transaction_fail() {
+        use thor_devkit::rlp::Decodable;
+
+        let node = ThorNode::testnet();
+        let signed = decode_hex("f8804a880106f4db1482fd5a81b4e1e09477845a52acad7fe6a346f5b09e5e89e7caec8e3b890391c64cd2bc206c008080828ca08088a63565b632b9b7c3c0b841d76de99625a1a8795e467d509818701ec5961a8a4cf7cc2d75cee95f9ad70891013aaa4088919cc46df4f1e3f87b4ea44d002033fa3f7bd69485cb807aa2985100");
+        let signed = Transaction::decode(&mut &signed[..]).unwrap();
+        assert_eq!(
+            node.broadcast_transaction(&signed)
+                .await
+                .unwrap_err()
+                .to_string(),
+            "Failed to broadcast: bad tx: chain tag mismatch"
         );
     }
 }

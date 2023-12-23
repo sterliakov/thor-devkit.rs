@@ -27,7 +27,7 @@ impl std::fmt::Display for ValidationError {
             Self::ZeroStorageKey => f.write_str("Account storage key cannot be zero"),
             Self::BroadcastFailed(text) => {
                 f.write_str("Failed to broadcast: ")?;
-                f.write_str(text)
+                f.write_str(text.strip_suffix('\n').unwrap_or(text))
             }
         }
     }
