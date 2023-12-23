@@ -8,12 +8,12 @@ guidelines for this repo. Here's what you need to know!
 **thor-devkit.rs** is proudly licenced under the GNU General Public License v3, and so are all
 contributions. Please see the [`LICENSE`] file in this directory for more details.
 
-[`LICENSE`]: https://github.com/sterliakov/thor-devkit.rs/blob/main/LICENSE
+[`LICENSE`]: https://github.com/sterliakov/thor-devkit.rs/blob/master/LICENSE
 
 ## Pull Requests
 
 To make changes to **thor-devkit.rs**, please send in pull requests on GitHub to
-the `main` branch. I'll review them and either merge or request changes. GitHub Actions
+the `master` branch. I'll review them and either merge or request changes. GitHub Actions
 tests everything as well, so you may get feedback from it too.
 
 If you make additions or other changes to a pull request, feel free to either amend

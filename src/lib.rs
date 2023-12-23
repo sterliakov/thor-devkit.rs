@@ -1,4 +1,4 @@
-#![doc(html_root_url = "https://docs.rs/thor-devkit/0.1.0-alpha.1")]
+#![doc(html_root_url = "https://docs.rs/thor-devkit/0.1.0-beta.1")]
 #![warn(rust_2018_idioms, missing_docs)]
 #![deny(dead_code, unused_imports, unused_mut)]
 
