@@ -40,8 +40,10 @@ serde_with = { version = "^3.4", features = ["hex"], optional = true }
 version-sync = "0.9.4"
 rand = { version = "0.8.5", features = ["getrandom"] }
 tokio = { version = "1", features = ["full"] }
+bloomfilter = "^1.0"
+ethabi = "^18.0"
 
 [features]
-default = ['http']
+# default = ['http']
 serde = ["dep:serde", "dep:serde_json", "dep:serde_with"]
 http = ["dep:reqwest", "serde"]

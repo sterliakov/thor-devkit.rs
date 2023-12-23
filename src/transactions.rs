@@ -19,28 +19,28 @@ rlp_encodable! {
     #[derive(Clone, Debug, Eq, PartialEq)]
     pub struct Transaction {
         /// Chain tag
-        #[serde(rename="chainTag")]
+        #[cfg_attr(feature="serde", serde(rename="chainTag"))]
         pub chain_tag: u8,
         /// Previous block reference
         ///
         /// First 4 bytes (BE) are block height, the rest is part of referred block ID.
-        #[serde(rename="blockRef")]
+        #[cfg_attr(feature="serde", serde(rename="blockRef"))]
         pub block_ref: u64,
         /// Expiration (in blocks)
         pub expiration: u32,
         /// Vector of clauses
         pub clauses: Vec<Clause>,
         /// Coefficient to calculate the gas price.
-        #[serde(rename="gasPriceCoef")]
+        #[cfg_attr(feature="serde", serde(rename="gasPriceCoef"))]
         pub gas_price_coef: u8,
         /// Maximal amount of gas to spend for transaction.
         pub gas: u64,
         /// Hash of transaction on which current transaction depends.
         ///
         /// May be left unspecified if this functionality is not necessary.
-        #[serde(rename="dependsOn")]
+        #[cfg_attr(feature="serde", serde(rename="dependsOn"))]
         pub depends_on: Option<U256> => AsBytes<U256>,
-        /// Transaction nonceserde_as
+        /// Transaction nonce
         pub nonce: u64,
         /// Reserved fields.
         pub reserved: Option<Reserved> => AsVec<Reserved>,
@@ -257,9 +257,9 @@ impl Transaction {
 
 rlp_encodable! {
     /// Represents a single transaction clause (recipient, value and data).
-    #[serde_with::serde_as]
+    #[cfg_attr(feature="serde", serde_with::serde_as)]
     #[cfg_attr(feature="serde", derive(Deserialize, Serialize))]
-    #[cfg_attr(feature="serde", derive(Clone, Debug, Eq, PartialEq))]
+    #[derive(Clone, Debug, Eq, PartialEq)]
     pub struct Clause {
         /// Recipient
         pub to: Option<Address> => AsBytes<Address>,

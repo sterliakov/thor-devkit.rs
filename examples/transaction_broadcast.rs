@@ -1,3 +1,5 @@
+//! Network communication requires `http` create feature.
+
 use std::{thread, time::Duration};
 use thor_devkit::hdnode::{HDNode, Language, Mnemonic};
 use thor_devkit::network::{AResult, BlockReference, ThorNode};
