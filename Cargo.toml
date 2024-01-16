@@ -2,8 +2,8 @@
 name = "thor-devkit"
 version = "0.1.0-beta.2"
 authors = ["Stanislav Terliakov <terlya.stas@gmail.com>"]
-description = "Rust library to aid coding with VeChain, eg. Wallets/Tx/Sign/Verify."
-documentation = "https://docs.rs/thor-devkit.rs"
+description = "Rust library to aid coding with VeChain: wallets, transactions signing, encoding and verification, smart contract ABI interfacing, etc."
+documentation = "https://docs.rs/thor-devkit"
 repository = "https://github.com/sterliakov/thor-devkit.rs"
 readme = "README.md"
 keywords = ["vechain", "crypto", "blockchain", "cryptography"]

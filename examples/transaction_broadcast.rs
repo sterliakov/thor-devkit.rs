@@ -21,7 +21,7 @@ async fn create_and_broadcast_transaction() -> AResult<()> {
         .unwrap();
     let transaction = Transaction {
         chain_tag: node.chain_tag,
-        block_ref: block_ref,
+        block_ref,
         expiration: 128,
         clauses: vec![Clause {
             to: Some(recipient),
