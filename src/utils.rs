@@ -10,7 +10,7 @@ pub fn blake2_256<S: AsRef<[u8]>>(bytes: &[S]) -> [u8; 32] {
     //! of the input sequence.
     let mut hasher = Blake2b256::new();
     bytes.iter().for_each(|b| hasher.update(b));
-    hasher.finalize().try_into().unwrap()
+    hasher.finalize().into()
 }
 
 pub fn keccak<S: AsRef<[u8]>>(bytes: S) -> [u8; 32] {

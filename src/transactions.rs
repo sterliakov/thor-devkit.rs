@@ -55,8 +55,6 @@ rlp_encodable! {
     }
 }
 
-// TODO: add serde optional support
-
 impl Transaction {
     /// Gas cost for whole transaction execution.
     pub const TRANSACTION_GAS: u64 = 5_000;
@@ -373,7 +371,7 @@ impl Reserved {
         self.features & Self::DELEGATED_BIT != 0
     }
     pub fn is_empty(&self) -> bool {
-        //! Belongs to delegated transaction?
+        //! Belongs to non-delegated transaction?
         self.features == 0 && self.unused.is_empty()
     }
 }
