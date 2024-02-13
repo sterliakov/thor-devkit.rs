@@ -269,6 +269,7 @@ macro_rules! rlp_encodable {
 /// <div class="warning">
 ///  Do not use it directly: it is only intended for use with `rlp_encodable!` macro.
 /// </div>
+#[allow(clippy::manual_non_exhaustive)]
 pub enum AsBytes<T: Encodable + Decodable> {
     #[doc(hidden)]
     Just(T),
@@ -315,6 +316,7 @@ impl<T: Encodable + Decodable> Decodable for AsBytes<T> {
 /// <div class="warning">
 ///  Do not use it directly: it is only intended for use with `rlp_encodable!` macro.
 /// </div>
+#[allow(clippy::manual_non_exhaustive)]
 pub enum AsVec<T: Encodable + Decodable> {
     #[doc(hidden)]
     Just(T),
@@ -362,6 +364,7 @@ impl<T: Encodable + Decodable> Decodable for AsVec<T> {
 /// <div class="warning">
 ///  Do not use it directly: it is only intended for use with `rlp_encodable!` macro.
 /// </div>
+#[allow(clippy::manual_non_exhaustive)]
 pub enum Maybe<T: Encodable + Decodable> {
     #[doc(hidden)]
     Just(T),
