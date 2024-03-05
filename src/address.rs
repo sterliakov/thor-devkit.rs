@@ -8,7 +8,6 @@ pub use secp256k1::{PublicKey, SecretKey as PrivateKey};
 use serde::{Deserialize, Serialize};
 use std::{
     ops::{Deref, DerefMut},
-    result::Result,
     str::FromStr,
 };
 
