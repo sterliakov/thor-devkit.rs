@@ -101,7 +101,6 @@ fn test_rlp_encode_basic_contract() {
     let mut buf = vec![];
     tx.encode(&mut buf);
     buf.iter().for_each(|c| print!("{:02x?}", c));
-    println!();
     assert_eq!(buf, expected);
     assert_eq!(
         Transaction::decode(&mut &buf[..]).expect("Must be decodable"),

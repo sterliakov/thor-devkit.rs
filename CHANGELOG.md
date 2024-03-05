@@ -9,6 +9,11 @@ Possible header types:
 - `Bug Fixes` for any bug fixes.
 - `Breaking Changes` for any backwards-incompatible changes.
 
+## v0.1.0-beta.3 (pending)
+
+### Features
+- Added `TransactionBuilder` to simplify transaction preparation.
+
 ## v0.1.0-beta.2 (2023-12-23)
 
 ### Bug Fixes

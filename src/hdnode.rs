@@ -195,7 +195,7 @@ impl<'a> HDNodeBuilder<'a> {
         self.path = Some(path);
         self
     }
-    pub fn seed(mut self, seed: [u8; 64]) -> Self {
+    pub const fn seed(mut self, seed: [u8; 64]) -> Self {
         //! Set a seed to use.
         self.seed = Some(seed);
         self
