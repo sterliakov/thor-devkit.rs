@@ -33,7 +33,6 @@ pub(crate) mod unhex {
     use serde_with::ser::SerializeAs;
     use std::any::type_name;
     use std::borrow::Cow;
-    use std::convert::{TryFrom, TryInto};
     use std::marker::PhantomData;
 
     #[derive(Copy, Clone, Debug, Default)]
