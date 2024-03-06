@@ -1,10 +1,14 @@
 //! VeChain transactions support.
 
 use crate::address::{Address, AddressConvertible, PrivateKey};
+#[cfg(feature = "builder")]
+use crate::network::ThorNode;
 use crate::rlp::{
     lstrip, static_left_pad, AsBytes, AsVec, BufMut, Bytes, BytesMut, Decodable, Encodable, Maybe,
     RLPError,
 };
+#[cfg(feature = "builder")]
+pub use crate::transaction_builder::{TransactionBuilder, TransactionBuilderError};
 use crate::utils::blake2_256;
 use crate::{rlp_encodable, U256};
 use secp256k1::ecdsa::{RecoverableSignature, RecoveryId};
@@ -87,7 +91,7 @@ impl Transaction {
             .expect("generated signature must be correct")
     }
 
-    fn signature_length_valid(&self) -> bool {
+    const fn signature_length_valid(&self) -> bool {
         match &self.signature {
             None => true,
             Some(signature) => {
@@ -127,7 +131,7 @@ impl Transaction {
     pub fn intrinsic_gas(&self) -> u64 {
         //! Calculate the intrinsic gas amount required for this transaction.
         //!
-        //! This amount is always less than actual amount of gas necessary.
+        //! This amount is always less than or equal to actual amount of gas necessary.
         //! `More info <https://docs.vechain.org/core-concepts/transactions/transaction-calculation>`
         let clauses_cost = if self.clauses.is_empty() {
             Clause::REGULAR_CLAUSE_GAS
@@ -189,7 +193,7 @@ impl Transaction {
         }
     }
 
-    pub fn is_delegated(&self) -> bool {
+    pub const fn is_delegated(&self) -> bool {
         //! Check if transaction is VIP-191 delegated.
         if let Some(reserved) = &self.reserved {
             reserved.is_delegated()
@@ -250,6 +254,12 @@ impl Transaction {
         } else {
             Err(secp256k1::Error::IncorrectSignature)
         }
+    }
+
+    #[cfg(feature = "builder")]
+    pub fn build(node: ThorNode) -> TransactionBuilder {
+        //! Create a transaction builder.
+        TransactionBuilder::new(node)
     }
 }
 
@@ -352,21 +362,21 @@ impl Reserved {
     /// Features bitmask for delegated transaction.
     pub const DELEGATED_BIT: u32 = 1;
 
-    pub fn new_delegated() -> Self {
+    pub const fn new_delegated() -> Self {
         //! Create reserved structure kind for VIP-191 delegation.
         Self {
             features: Self::DELEGATED_BIT,
             unused: vec![],
         }
     }
-    pub fn new_empty() -> Self {
+    pub const fn new_empty() -> Self {
         //! Create reserved structure kind for regular transaction.
         Self {
             features: 0,
             unused: vec![],
         }
     }
-    pub fn is_delegated(&self) -> bool {
+    pub const fn is_delegated(&self) -> bool {
         //! Belongs to delegated transaction?
         self.features & Self::DELEGATED_BIT != 0
     }

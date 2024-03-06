@@ -13,11 +13,14 @@ pub type AResult<T> = std::result::Result<T, Box<dyn std::error::Error + Send + 
 
 /// Validation errors (not related to HTTP failures)
 #[derive(Clone, Debug, Eq, PartialEq)]
+#[non_exhaustive]
 pub enum ValidationError {
     /// Account storage keys start from one, there's no key 0.
     ZeroStorageKey,
     /// Transaction broadcast failed
     BroadcastFailed(String),
+    /// Unexpected failure
+    Unknown(String),
 }
 
 impl std::error::Error for ValidationError {}
@@ -29,11 +32,16 @@ impl std::fmt::Display for ValidationError {
                 f.write_str("Failed to broadcast: ")?;
                 f.write_str(text.strip_suffix('\n').unwrap_or(text))
             }
+            Self::Unknown(text) => {
+                f.write_str("Unknown error: ")?;
+                f.write_str(text.strip_suffix('\n').unwrap_or(text))
+            }
         }
     }
 }
 
 /// A simple HTTP REST client for a VeChain node.
+#[derive(Clone, Debug)]
 pub struct ThorNode {
     /// API base url
     pub base_url: Url,
@@ -284,6 +292,13 @@ pub struct BlockInfo {
     pub com: bool,
     /// The one who signed this block
     pub signer: Address,
+}
+
+impl BlockInfo {
+    pub const fn block_ref(&self) -> u64 {
+        //! Extract blockRef for transaction.
+        self.id.0[3]
+    }
 }
 
 /// Transaction data included in the block extended details.
@@ -561,6 +576,12 @@ impl ThorNode {
             let decoded: BlockResponse = serde_json::from_str(&response)?;
             Ok(Some((decoded.base, decoded.transactions)))
         }
+    }
+
+    pub async fn fetch_best_block(&self) -> AResult<(BlockInfo, Vec<U256>)> {
+        //! Retrieve a best block from node.
+        let info = self.fetch_block(BlockReference::Best).await?;
+        Ok(info.ok_or(ValidationError::Unknown("Best block not found".to_string()))?)
     }
 
     pub async fn fetch_block_expanded(

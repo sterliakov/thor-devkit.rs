@@ -88,6 +88,8 @@ pub mod hdnode;
 #[cfg(feature = "http")]
 pub mod network;
 pub mod rlp;
+#[cfg(feature = "http")]
+mod transaction_builder;
 pub mod transactions;
 mod utils;
 pub use ethereum_types::U256;

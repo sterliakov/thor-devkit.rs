@@ -1,40 +1,24 @@
 //! Network communication requires `http` create feature.
+//! Transaction builder requires additionally `builder` feature.
 
 use std::{thread, time::Duration};
 use thor_devkit::hdnode::{HDNode, Language, Mnemonic};
-use thor_devkit::network::{AResult, BlockReference, ThorNode};
-use thor_devkit::transactions::{Clause, Transaction};
+use thor_devkit::network::{AResult, ThorNode};
+use thor_devkit::transactions::Transaction;
 use thor_devkit::Address;
 
 async fn create_and_broadcast_transaction() -> AResult<()> {
     let node = ThorNode::testnet();
-    let block_ref = node
-        .fetch_block(BlockReference::Best)
-        .await?
-        .expect("Must exist")
-        .0
-        .id
-        .0[3];
     let recipient: Address = std::env::var("TEST_TO_ADDRESS")
         .expect("Address must be provided")
         .parse()
         .unwrap();
-    let transaction = Transaction {
-        chain_tag: node.chain_tag,
-        block_ref,
-        expiration: 128,
-        clauses: vec![Clause {
-            to: Some(recipient),
-            value: 1000.into(),
-            data: b"".to_vec().into(),
-        }],
-        gas_price_coef: 128,
-        gas: 21000,
-        depends_on: None,
-        nonce: 0xbc614e,
-        reserved: None,
-        signature: None,
-    };
+    let amount = 10;
+    let transaction = Transaction::build(node.clone())
+        .gas_price_coef(128)
+        .add_transfer(recipient, amount)
+        .build()
+        .await?;
     let mnemonic = Mnemonic::from_phrase(
         &std::env::var("TEST_MNEMONIC").expect("Mnemonic must be provided"),
         Language::English,
@@ -46,10 +30,11 @@ async fn create_and_broadcast_transaction() -> AResult<()> {
         sender.to_checksum_address(),
         recipient.to_checksum_address()
     );
+    let sender_before = node.fetch_account(sender).await?.balance;
+    let recipient_before = node.fetch_account(recipient).await?.balance;
     println!(
         "Balances before: {:?}, {:?}",
-        node.fetch_account(sender).await?.balance,
-        node.fetch_account(recipient).await?.balance
+        sender_before, recipient_before
     );
     let signed = transaction.sign(&wallet.private_key()?.private_key());
     let id = node.broadcast_transaction(&signed).await?;
@@ -66,11 +51,11 @@ async fn create_and_broadcast_transaction() -> AResult<()> {
             thread::sleep(Duration::from_secs(2));
         }
     }
-    println!(
-        "Balances after: {:?}, {:?}",
-        node.fetch_account(sender).await?.balance,
-        node.fetch_account(recipient).await?.balance
-    );
+    let sender_after = node.fetch_account(sender).await?.balance;
+    let recipient_after = node.fetch_account(recipient).await?.balance;
+    println!("Balances after: {:?}, {:?}", sender_after, recipient_after);
+    assert_eq!(sender_before - sender_after, amount.into());
+    assert_eq!(recipient_after - recipient_before, amount.into());
     Ok(())
 }
 
