@@ -36,8 +36,7 @@ impl Deref for Address {
 }
 impl Encodable for Address {
     fn encode(&self, out: &mut dyn open_fastrlp::BufMut) {
-        use crate::rlp::lstrip;
-        bytes::Bytes::copy_from_slice(&lstrip(self.0)).encode(out)
+        bytes::Bytes::copy_from_slice(self.0.as_bytes()).encode(out)
     }
 }
 impl Decodable for Address {
