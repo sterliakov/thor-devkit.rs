@@ -1,4 +1,4 @@
-#![doc(html_root_url = "https://docs.rs/thor-devkit/0.1.0-beta.2")]
+#![doc(html_root_url = "https://docs.rs/thor-devkit/0.1.0-beta.3")]
 #![warn(rust_2018_idioms, missing_docs)]
 #![deny(dead_code, unused_imports, unused_mut)]
 
@@ -64,6 +64,14 @@
 //! [crates.io]: https://crates.io/crates/thor-devkit
 //! [`README.md`]: https://github.com/sterliakov/thor-devkit.rs
 //!
+//! ### MSRV
+//!
+//! `thor-devkit` promises to maintain a reasonable MSRV policy. MSRV will not be
+//! bumped unless necessary, and such MSRV bumps will only happen in minor or major
+//! releases as soon as the first non-beta release goes live. The required version
+//! will never be newer than 6 months.
+//!
+//! Currently it requires rust `1.69.0` or higher to build.
 //!
 //! ## Contributing
 //!
