@@ -69,7 +69,7 @@ You can find the crate's readme documentation on the
 [crates.io]: https://crates.io/crates/thor-devkit
 [`README.md`]: https://github.com/sterliakov/thor-devkit.rs
 
-### MSRV
+#### MSRV
 
 `thor-devkit` promises to maintain a reasonable MSRV policy. MSRV will not be
 bumped unless necessary, and such MSRV bumps will only happen in minor or major
