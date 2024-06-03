@@ -672,6 +672,95 @@ mod test_network {
     }
 
     #[tokio::test]
+    async fn test_eth_call_advanced() {
+        let client = ThorNode::testnet();
+        // Get VTHO balance of a known address
+        let data = "70a082310000000000000000000000001e3f4f0ba6cc8054a9dc4d436d929b5b002e265c";
+        let request = EthCallRequest::from_clause(Clause {
+            // VTHO
+            to: Some(
+                "0x0000000000000000000000000000456E65726779"
+                    .parse()
+                    .unwrap(),
+            ),
+            value: 0.into(),
+            data: Bytes::copy_from_slice(&decode_hex(data)[..]),
+        });
+        let result = client
+            .eth_call_advanced(request, BlockReference::Best)
+            .await
+            .expect("Must not fail");
+        assert!(result.len() == 1, "Must return one output");
+    }
+
+    #[tokio::test]
+    async fn test_eth_call_advanced_full() {
+        let client = ThorNode::testnet();
+        // Get VTHO balance of a known address
+        let data = "70a082310000000000000000000000001e3f4f0ba6cc8054a9dc4d436d929b5b002e265c";
+        let data2 = "70a08231000000000000000000000000d6b00354AaD5cDB51663b46474C9eA2C679c32f2";
+        let request = EthCallRequest {
+            clauses: vec![
+                Clause {
+                    // VTHO
+                    to: Some(
+                        "0x0000000000000000000000000000456E65726779"
+                            .parse()
+                            .unwrap(),
+                    ),
+                    value: 0.into(),
+                    data: Bytes::copy_from_slice(&decode_hex(data)[..]),
+                },
+                Clause {
+                    // VTHO
+                    to: Some(
+                        "0x0000000000000000000000000000456E65726779"
+                            .parse()
+                            .unwrap(),
+                    ),
+                    value: 0.into(),
+                    data: Bytes::copy_from_slice(&decode_hex(data2)[..]),
+                },
+            ],
+            gas_price: None,
+            gas: None,
+            caller: None,
+        };
+        let result = client
+            .eth_call_advanced(request, BlockReference::Best)
+            .await
+            .expect("Must not fail");
+        assert!(result.len() == 2, "Must return one output");
+        for tx in result {
+            assert!(!tx.reverted, "Must succeed");
+            println!("{:?}: {}", tx.data, tx.data.len());
+            assert!(tx.data.len() == 32, "Must be single U256");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_eth_call() {
+        let client = ThorNode::testnet();
+        // Get VTHO balance of a known address
+        let data = "70a082310000000000000000000000001e3f4f0ba6cc8054a9dc4d436d929b5b002e265c";
+        let request = Clause {
+            // VTHO
+            to: Some(
+                "0x0000000000000000000000000000456E65726779"
+                    .parse()
+                    .unwrap(),
+            ),
+            value: 0.into(),
+            data: Bytes::copy_from_slice(&decode_hex(data)[..]),
+        };
+        let result = client
+            .eth_call(request, BlockReference::Best)
+            .await
+            .expect("Must not fail");
+        assert!(result.len() == 32, "Must be a single u256");
+    }
+
+    #[tokio::test]
     async fn test_broadcast_transaction_fail() {
         use thor_devkit::rlp::Decodable;
 
