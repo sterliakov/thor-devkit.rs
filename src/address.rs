@@ -36,23 +36,12 @@ impl Deref for Address {
 }
 impl Encodable for Address {
     fn encode(&self, out: &mut dyn open_fastrlp::BufMut) {
-        use crate::rlp::lstrip;
-        bytes::Bytes::copy_from_slice(&lstrip(self.0)).encode(out)
+        self.0.encode(out)
     }
 }
 impl Decodable for Address {
     fn decode(buf: &mut &[u8]) -> Result<Self, RLPError> {
-        use crate::rlp::static_left_pad;
-        let bytes = bytes::Bytes::decode(buf)?;
-        Ok(Self(WrappedAddress::from_slice(
-            &static_left_pad::<20>(&bytes).map_err(|e| match e {
-                RLPError::Overflow => RLPError::ListLengthMismatch {
-                    expected: Self::WIDTH,
-                    got: bytes.len(),
-                },
-                e => e,
-            })?,
-        )))
+        Ok(Self(WrappedAddress::decode(buf)?))
     }
 }
 impl FromStr for Address {
