@@ -332,7 +332,7 @@ struct BlockExtendedResponse {
 }
 
 /// Block reference: a way to identify the block on the chain.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum BlockReference {
     /// Latest: already approved by some node, but not finalized yet.
     Best,
@@ -422,6 +422,33 @@ pub struct SimulateCallRequest {
     #[serde_as(as = "unhex::HexNum<8, u64>")]
     #[serde(rename = "blockRef")]
     pub block_ref: u64,
+}
+
+/// `eth_call` (pure or view function call without on-chain transaction) request
+#[serde_with::serde_as]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct EthCallRequest {
+    /// Clauses of transaction
+    pub clauses: Vec<Clause>,
+    /// Maximal amount of gas
+    pub gas: Option<u64>,
+    /// Gas price
+    #[serde(rename = "gasPrice")]
+    pub gas_price: Option<u64>,
+    /// Caller address
+    pub caller: Option<Address>,
+}
+
+impl EthCallRequest {
+    pub fn from_clause(clause: Clause) -> Self {
+        //! Shortcut for a single clause request.
+        return Self {
+            clauses: vec![clause],
+            gas: None,
+            gas_price: None,
+            caller: None,
+        };
+    }
 }
 
 /// Transaction execution simulation request
@@ -680,6 +707,10 @@ impl ThorNode {
         request: SimulateCallRequest,
     ) -> AResult<Vec<SimulateCallResponse>> {
         //! Simulate a transaction execution.
+        //!
+        //! This is an equivalent of eth_call and can be used to call `pure` and
+        //! `view` functions without broadcasting a transaction. See
+        //! [`eth_call`] for a better interface
         let client = Client::new();
         let response = client
             .post(self.base_url.join("/accounts/*")?)
@@ -689,5 +720,44 @@ impl ThorNode {
             .json::<Vec<SimulateCallResponse>>()
             .await?;
         Ok(response)
+    }
+
+    pub async fn eth_call_advanced(
+        &self,
+        request: EthCallRequest,
+        block_ref: BlockReference,
+    ) -> AResult<Vec<SimulateCallResponse>> {
+        //! Call a `pure` or `view` function as defined by `clause.data`,
+        //! possibly providing additional options.
+        let client = Client::new();
+        let response = client
+            .post(self.base_url.join("/accounts/*")?)
+            .query(&[("revision", block_ref.as_query_param())])
+            .json(&request)
+            .send()
+            .await?
+            .json::<Vec<SimulateCallResponse>>()
+            .await?;
+        Ok(response)
+    }
+
+    pub async fn eth_call(&self, clause: Clause, block_ref: BlockReference) -> AResult<Bytes> {
+        //! Call a `pure` or `view` function as defined by `clause.data`.
+        //!
+        //! Returns byte representation of the returned data, error on revert
+        //! or when unexpected payload is returned
+        let mut response = self
+            .eth_call_advanced(EthCallRequest::from_clause(clause), block_ref)
+            .await?;
+        if response.len() > 1 {
+            return Err("Multiple responses".into());
+        } else if response.is_empty() {
+            return Err("Empty response".into());
+        }
+        let tx = response.remove(0);
+        if tx.reverted {
+            return Err("Transaction reverted".into());
+        }
+        Ok(tx.data)
     }
 }

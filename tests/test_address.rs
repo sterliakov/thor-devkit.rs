@@ -1,3 +1,4 @@
+use open_fastrlp::Encodable;
 use thor_devkit::{Address, AddressConvertible, PublicKey};
 
 #[test]
@@ -45,4 +46,32 @@ fn test_to_checksum_address() {
                 .to_checksum_address()
         );
     });
+}
+
+#[test]
+fn test_encode() {
+    let address: Address = "0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed"
+        .parse()
+        .unwrap();
+    let mut buf = vec![];
+    address.encode(&mut buf);
+    let expected = vec![
+        0x94, 0x5a, 0xae, 0xb6, 0x05, 0x3f, 0x3e, 0x94, 0xc9, 0xb9, 0xa0, 0x9f, 0x33, 0x66, 0x94,
+        0x35, 0xe7, 0xef, 0x1b, 0xea, 0xed,
+    ];
+    assert!(buf == expected, "Encoding mismatch")
+}
+
+#[test]
+fn test_encode_leading_zeros() {
+    let address: Address = "0x00220a0cf47C7B9Be7a2e6ba89f429762e7B9adB"
+        .parse()
+        .unwrap();
+    let mut buf = vec![];
+    address.encode(&mut buf);
+    let expected = vec![
+        0x94, 0x00, 0x22, 0x0a, 0x0c, 0xf4, 0x7c, 0x7b, 0x9b, 0xe7, 0xa2, 0xe6, 0xba, 0x89, 0xf4,
+        0x29, 0x76, 0x2e, 0x7b, 0x9a, 0xdb,
+    ];
+    assert!(buf == expected, "Encoding mismatch")
 }

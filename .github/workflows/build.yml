@@ -70,8 +70,10 @@ jobs:
       - name: Run tests with coverage
         run: RUST_BACKTRACE=1 cargo tarpaulin --out Xml --all-features
 
-      - name: Submit a transaction to chain
-        run: RUST_BACKTRACE=1 cargo run --example transaction_broadcast --all-features
+      - name: Submit several transactions to chain
+        run: |
+          RUST_BACKTRACE=1 cargo run --example transaction_broadcast --all-features
+          RUST_BACKTRACE=1 cargo run --example contract_interaction --all-features
         env:
           TEST_TO_ADDRESS: ${{ secrets.TO_ADDRESS }}
           TEST_MNEMONIC: ${{ secrets.MNEMONIC }}

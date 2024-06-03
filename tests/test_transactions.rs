@@ -388,27 +388,12 @@ fn test_rlp_decode_address_too_long() {
     );
     assert_eq!(
         Transaction::decode(&mut &malformed[..]).unwrap_err(),
-        RLPError::ListLengthMismatch {
-            expected: 20,
-            got: 21
-        }
-    );
-}
-
-#[test]
-fn test_rlp_decode_address_startswith_zero_misencoded() {
-    let malformed = decode_hex(
-        "eb0184aabbccdd20d8d7940067d83b7b8d80addcb281a71d54fc7b3364ffed808081808252088083bc614ec0",
-    );
-    assert_eq!(
-        Transaction::decode(&mut &malformed[..]).unwrap_err(),
-        RLPError::LeadingZero
+        RLPError::UnexpectedLength
     );
 }
 
 #[test]
 fn test_rlp_decode_address_shorter() {
-    // TODO: test on chain
     let tx = Transaction {
         clauses: vec![Clause {
             to: Some(
@@ -442,7 +427,7 @@ fn test_rlp_decode_address_shorter() {
 
     let mut buf_full = vec![];
     tx_full.encode(&mut buf_full);
-    assert_eq!(buf_full.len(), buf.len() + 1);
+    assert_eq!(buf_full.len(), buf.len());
 }
 
 #[test]

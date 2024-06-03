@@ -9,7 +9,16 @@ Possible header types:
 - `Bug Fixes` for any bug fixes.
 - `Breaking Changes` for any backwards-incompatible changes.
 
-## v0.1.0-beta.3 (pending)
+## v0.1.0-beta.5 (pending)
+Nothing yet:(
+
+## v0.1.0-beta.4
+- Fixed incorrect address encoding in presence of leading zeroes (#28).
+- Added `ThorNode::eth_call` and `ThorNode::eth_call_advanced` for `view` and `pure` functions calling.
+- Added a contract interaction example.
+
+## v0.1.0-beta.3
+- Increased MSRV to 1.69.0 due to incompatible upstream dependency.
 
 ### Features
 - Added `TransactionBuilder` to simplify transaction preparation.
