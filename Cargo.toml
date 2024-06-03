@@ -1,6 +1,6 @@
 [package]
 name = "thor-devkit"
-version = "0.1.0-beta.3"
+version = "0.1.0-beta.4"
 authors = ["Stanislav Terliakov <terlya.stas@gmail.com>"]
 description = "Rust library to aid coding with VeChain: wallets, transactions signing, encoding and verification, smart contract ABI interfacing, etc."
 documentation = "https://docs.rs/thor-devkit"
