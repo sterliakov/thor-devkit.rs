@@ -1,83 +1,83 @@
 name: build
 on:
-    push:
-        branches: [master]
-    pull_request:
-        branches: [master]
-    schedule:
-    -   cron: 0 0 * * 1
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  schedule:
+    - cron: 0 0 * * 1
 
 permissions:
-    contents: read
+  contents: read
 
 jobs:
-    build:
-        name: Build with rust ${{matrix.rust}} on ${{matrix.os == 'ubuntu' && 'Linux' || matrix.os == 'macos' && 'macOS' || matrix.os == 'windows' && 'Windows' || '???'}}
-        runs-on: ${{matrix.os}}-latest
-        strategy:
-            fail-fast: false
-            matrix:
-                rust:
-                -   1.79.0 # MSRV
-                -   stable
-                -   beta
-                -   nightly
-                os: [ubuntu, windows, macos]
-        steps:
-        -   uses: actions/checkout@v4
-            with:
-                persist-credentials: false
-        -   name: Stable with rustfmt and clippy
-            uses: dtolnay/rust-toolchain@master
-            with:
-                components: rustfmt, clippy
-                toolchain: ${{matrix.rust}}
-        -   name: Release build
-            run: cargo build --release --all-features
+  build:
+    name: Build with rust ${{matrix.rust}} on ${{matrix.os == 'ubuntu' && 'Linux' || matrix.os == 'macos' && 'macOS' || matrix.os == 'windows' && 'Windows' || '???'}}
+    runs-on: ${{matrix.os}}-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        rust:
+          - 1.79.0         # MSRV
+          - stable
+          - beta
+          - nightly
+        os: [ubuntu, windows, macos]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Stable with rustfmt and clippy
+        uses: dtolnay/rust-toolchain@master
+        with:
+          components: rustfmt, clippy
+          toolchain: ${{matrix.rust}}
+      - name: Release build
+        run: cargo build --release --all-features
 
-    test:
-        name: Test
-        runs-on: ubuntu-latest
-        timeout-minutes: 30
-        steps:
-        -   uses: actions/checkout@v4
-            with:
-                persist-credentials: false
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
-        -   uses: actions/setup-python@v5
-        -   name: Install stable toolchain
-            uses: dtolnay/rust-toolchain@stable
-            with:
-                toolchain: stable
+      - uses: actions/setup-python@v5
+      - name: Install stable toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
 
-        -   uses: pre-commit/action@v3.0.1
-            env:
-                GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - uses: pre-commit/action@v3.0.1
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-        -   uses: taiki-e/install-action@v2  # zizmor: ignore[ref-confusion]
-            with:
-                tool: cargo-tarpaulin,cargo-rdme
+      - uses: taiki-e/install-action@v2      # zizmor: ignore[ref-confusion]
+        with:
+          tool: cargo-tarpaulin,cargo-rdme
 
-        -   name: Check README is up-to-date
-            run: cargo rdme --check
+      - name: Check README is up-to-date
+        run: cargo rdme --check
 
-        -   name: Run tests with coverage
-            run: RUST_BACKTRACE=1 cargo tarpaulin --out Xml --all-features
+      - name: Run tests with coverage
+        run: RUST_BACKTRACE=1 cargo tarpaulin --out Xml --all-features
 
-        -   name: Submit several transactions to chain
-            run: |
-                RUST_BACKTRACE=1 cargo run --example transaction_broadcast --all-features
-                RUST_BACKTRACE=1 cargo run --example contract_interaction --all-features
-            env:
-                TEST_TO_ADDRESS: ${{ secrets.TO_ADDRESS }}
-                TEST_MNEMONIC: ${{ secrets.MNEMONIC }}
+      - name: Submit several transactions to chain
+        run: |
+          RUST_BACKTRACE=1 cargo run --example transaction_broadcast --all-features
+          RUST_BACKTRACE=1 cargo run --example contract_interaction --all-features
+        env:
+          TEST_TO_ADDRESS: ${{ secrets.TO_ADDRESS }}
+          TEST_MNEMONIC: ${{ secrets.MNEMONIC }}
 
-        -   name: Upload coverage reports to Codecov
-            uses: codecov/codecov-action@v5
-            env:
-                CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-        -   name: Archive code coverage results
-            uses: actions/upload-artifact@v4
-            with:
-                name: code-coverage-report
-                path: cobertura.xml
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v5
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+      - name: Archive code coverage results
+        uses: actions/upload-artifact@v4
+        with:
+          name: code-coverage-report
+          path: cobertura.xml
