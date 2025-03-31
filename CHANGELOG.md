@@ -9,8 +9,8 @@ Possible header types:
 - `Bug Fixes` for any bug fixes.
 - `Breaking Changes` for any backwards-incompatible changes.
 
-## v0.1.0-beta.5 (pending)
-Nothing yet:(
+## v0.1.0
+- Breaking: bumped MSRV to 1.78.0
 
 ## v0.1.0-beta.4
 - Fixed incorrect address encoding in presence of leading zeroes (#28).

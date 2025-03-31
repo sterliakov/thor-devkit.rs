@@ -71,7 +71,7 @@
 //! releases as soon as the first non-beta release goes live. The required version
 //! will never be newer than 6 months.
 //!
-//! Currently it requires rust `1.69.0` or higher to build.
+//! Currently it requires rust `1.78.0` or higher to build.
 //!
 //! ## Contributing
 //!
@@ -80,7 +80,7 @@
 //!
 //! Check out the [Contributing][] section in the docs for more info.
 //!
-//! [Contributing]: CONTRIBUTING.md
+//! [Contributing]: https://github.com/sterliakov/thor-devkit.rs/blob/master/CONTRIBUTING.md
 //! [open an issue]: https://github.com/sterliakov/thor-devkit.rs/issues
 //!
 //! ## License

@@ -1,6 +1,6 @@
 [package]
 name = "thor-devkit"
-version = "0.1.0-beta.4"
+version = "0.1.0"
 authors = ["Stanislav Terliakov <terlya.stas@gmail.com>"]
 description = "Rust library to aid coding with VeChain: wallets, transactions signing, encoding and verification, smart contract ABI interfacing, etc."
 documentation = "https://docs.rs/thor-devkit"
@@ -10,7 +10,7 @@ keywords = ["vechain", "crypto", "blockchain", "cryptography"]
 categories = ["cryptography"]
 license = "GPL-3.0"
 edition = "2021"
-rust-version = "1.69.0"
+rust-version = "1.78.0"
 
 # See here for more info: https://blog.rust-lang.org/2020/03/15/docs-rs-opt-into-fewer-targets.html
 
