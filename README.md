@@ -76,7 +76,7 @@ bumped unless necessary, and such MSRV bumps will only happen in minor or major
 releases as soon as the first non-beta release goes live. The required version
 will never be newer than 6 months.
 
-Currently it requires rust `1.79.0` or higher to build.
+Currently it requires rust `1.81.0` or higher to build.
 
 ### Contributing
 
@@ -85,7 +85,7 @@ to discuss a new feature or change.
 
 Check out the [Contributing][] section in the docs for more info.
 
-[Contributing]: CONTRIBUTING.md
+[Contributing]: https://github.com/sterliakov/thor-devkit.rs/blob/master/CONTRIBUTING.md
 [open an issue]: https://github.com/sterliakov/thor-devkit.rs/issues
 
 ### License

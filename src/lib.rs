@@ -71,7 +71,7 @@
 //! releases as soon as the first non-beta release goes live. The required version
 //! will never be newer than 6 months.
 //!
-//! Currently it requires rust `1.79.0` or higher to build.
+//! Currently it requires rust `1.81.0` or higher to build.
 //!
 //! ## Contributing
 //!
