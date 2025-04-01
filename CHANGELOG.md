@@ -11,6 +11,7 @@ Possible header types:
 
 ## v0.1.0
 - Breaking: bumped MSRV to 1.78.0
+- Breaking: upgraded most of direct dependencies
 
 ## v0.1.0-beta.4
 - Fixed incorrect address encoding in presence of leading zeroes (#28).
