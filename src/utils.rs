@@ -24,6 +24,7 @@ pub fn keccak<S: AsRef<[u8]>>(bytes: S) -> [u8; 32] {
 
 #[cfg(feature = "serde")]
 pub(crate) mod unhex {
+    use crate::rlp::RLPError;
     use crate::U256;
     use rustc_hex::{FromHex, ToHex};
     use serde::de::Error;
@@ -175,10 +176,10 @@ pub(crate) mod unhex {
 
     #[inline]
     #[cfg(not(tarpaulin_include))]
-    fn static_left_pad<const N: usize>(data: &[u8]) -> Result<[u8; N], open_fastrlp::DecodeError> {
+    fn static_left_pad<const N: usize>(data: &[u8]) -> Result<[u8; N], RLPError> {
         // Similar to RLP padding, but allows leading zero. Tested there.
         if data.len() > N {
-            return Err(open_fastrlp::DecodeError::Overflow);
+            return Err(RLPError::Overflow);
         }
 
         let mut v = [0; N];

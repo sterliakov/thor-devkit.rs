@@ -62,7 +62,7 @@ jobs:
         run: cargo rdme --check
 
       - name: Run tests with coverage
-        run: RUST_BACKTRACE=1 cargo tarpaulin --out Xml --all-features
+        run: RUST_BACKTRACE=1 cargo tarpaulin --out Xml --all-features --doc --tests
 
       - name: Submit several transactions to chain
         run: |

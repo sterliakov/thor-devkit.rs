@@ -164,7 +164,6 @@ impl From<bip32::Error> for HDNodeError {
 /// ```rust
 /// use thor_devkit::hdnode::{Mnemonic, Language, HDNode};
 /// use rand::RngCore;
-/// use rand::rngs::OsRng;
 ///
 /// let mnemonic = Mnemonic::from_phrase(
 ///     "ignore empty bird silly journey junior ripple have guard waste between tenant",
@@ -174,7 +173,7 @@ impl From<bip32::Error> for HDNodeError {
 /// let wallet = HDNode::build().mnemonic(mnemonic).build().expect("Must be buildable");
 /// // OR
 /// let mut entropy = [0u8; 64];
-/// OsRng.fill_bytes(&mut entropy);
+/// rand::rng().fill_bytes(&mut entropy);
 /// let other_wallet = HDNode::build().seed(entropy).build().expect("Must be buildable");
 /// ```
 #[derive(Clone, Default)]

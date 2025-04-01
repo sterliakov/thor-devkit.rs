@@ -85,7 +85,7 @@
 //! We need a way to encode numbers (like [`u64`]), custom structs, enums and other
 //! more complex machinery that exists in the surrounding code.
 //!
-//! This library wraps [`open_fastrlp`](https://docs.rs/open-fastrlp/0.1.4/open_fastrlp/)
+//! This library wraps [`fastrlp`](https://docs.rs/fastrlp/0.4.0/fastrlp/)
 //! crate, so everything mentioned there about [`Encodable`] and [`Decodable`] traits still
 //! applies. You can implement those for any object to make it RLP-serializable.
 //!
@@ -174,45 +174,42 @@
 //!
 
 pub use bytes::{Buf, BufMut, Bytes, BytesMut};
-pub use open_fastrlp::{Decodable, DecodeError as RLPError, Encodable, Header};
+pub use fastrlp::{Decodable, DecodeError as RLPError, Encodable, Header};
+
+/// Convenience alias for a result of fallible RLP decoding.
+pub type RLPResult<T> = Result<T, RLPError>;
 
 #[doc(hidden)]
 #[macro_export]
 macro_rules! __encode_as {
-    ($out:expr, $field:expr) => {{
-        use $crate::rlp::Encodable;
-        $field.encode($out)
-    }};
-    ($out:expr, $field:expr => $cast:ty) => {{
-        use $crate::rlp::Encodable;
+    ($out:expr, $field:expr) => {
+        $field.encode($out);
+    };
+    ($out:expr, $field:expr => $cast:ty) => {
         // TODO: this clone bugs me, we should be able to do better
-        <$cast>::from($field.clone()).encode($out)
-    }};
+        <$cast>::from($field.clone()).encode($out);
+    };
 
-    ($out:expr, $field:expr $(=> $cast:ty)?, $($fields:expr $(=> $casts:ty)?),+) => {{
+    ($out:expr, $field:expr $(=> $cast:ty)?, $($fields:expr $(=> $casts:ty)?),+) => {
         $crate::__encode_as! { $out, $field $(=> $cast)? }
         $crate::__encode_as! { $out, $($fields $(=> $casts)?),+ }
-    }};
+    };
 }
 
 #[doc(hidden)]
 #[macro_export]
 macro_rules! __decode_as {
-    ($buf:expr, $field:ty) => {{
-        #[allow(unused_imports)]
-        use $crate::rlp::Decodable;
+    ($buf:expr, $field:ty) => {
         <$field>::decode($buf)?
-    }};
-    ($buf:expr, $field:ty => $cast:ty) => {{
-        #[allow(unused_imports)]
-        use $crate::rlp::Decodable;
+    };
+    ($buf:expr, $field:ty => $cast:ty) => {
         <$field>::from(<$cast>::decode($buf)?)
-    }};
+    };
 
-    ($buf:expr, $field:ty $(=> $cast:ty)?, $($fields:ty $(=> $casts:ty)?),+) => {{
+    ($buf:expr, $field:ty $(=> $cast:ty)?, $($fields:ty $(=> $casts:ty)?),+) => {
         $crate::__decode_as! { $buf, $field $(=> $cast)? }
         $crate::__decode_as! { $buf, $($fields $(=> $casts)?),+ }
-    }};
+    };
 }
 
 /// Create an RLP-encodable struct by specifying types to cast to.
@@ -237,7 +234,8 @@ macro_rules! rlp_encodable {
 
         impl $name {
             fn encode_internal(&self, out: &mut dyn $crate::rlp::BufMut) {
-                $crate::__encode_as!(out, $(self.$field_name $(=> $cast)?),+)
+                use $crate::rlp::Encodable;
+                $crate::__encode_as!(out, $(self.$field_name $(=> $cast)?),+);
             }
         }
 
@@ -254,7 +252,9 @@ macro_rules! rlp_encodable {
         }
 
         impl $crate::rlp::Decodable for $name {
-            fn decode(buf: &mut &[u8]) -> Result<Self, $crate::rlp::RLPError> {
+            fn decode(buf: &mut &[u8]) -> $crate::rlp::RLPResult<Self> {
+                #[allow(unused_imports)]
+                use $crate::rlp::Decodable;
                 $crate::rlp::Header::decode(buf)?;
                 Ok(Self {
                     $($field_name: $crate::__decode_as!(buf, $field_type $(=> $cast)? )),*
@@ -301,8 +301,8 @@ impl<T: Encodable + Decodable> From<AsBytes<T>> for Option<T> {
     }
 }
 impl<T: Encodable + Decodable> Decodable for AsBytes<T> {
-    fn decode(buf: &mut &[u8]) -> Result<Self, open_fastrlp::DecodeError> {
-        if buf[0] == open_fastrlp::EMPTY_STRING_CODE {
+    fn decode(buf: &mut &[u8]) -> RLPResult<Self> {
+        if buf[0] == fastrlp::EMPTY_STRING_CODE {
             Bytes::decode(buf)?;
             Ok(Self::Nothing)
         } else {
@@ -327,7 +327,11 @@ impl<T: Encodable + Decodable> Encodable for AsVec<T> {
     fn encode(&self, out: &mut dyn BufMut) {
         match self {
             Self::Just(value) => value.encode(out),
-            Self::Nothing => Vec::<u8>::new().encode(out),
+            Self::Nothing => fastrlp::Header {
+                list: true,
+                payload_length: 0,
+            }
+            .encode(out),
         }
     }
 }
@@ -348,10 +352,19 @@ impl<T: Encodable + Decodable> From<AsVec<T>> for Option<T> {
     }
 }
 impl<T: Encodable + Decodable> Decodable for AsVec<T> {
-    fn decode(buf: &mut &[u8]) -> Result<Self, open_fastrlp::DecodeError> {
-        if buf[0] == open_fastrlp::EMPTY_LIST_CODE {
-            Vec::<u8>::decode(buf)?;
-            Ok(Self::Nothing)
+    fn decode(buf: &mut &[u8]) -> RLPResult<Self> {
+        if buf[0] == fastrlp::EMPTY_LIST_CODE {
+            let header = fastrlp::Header::decode(buf)?;
+            if !header.list {
+                Err(RLPError::UnexpectedString)
+            } else if header.payload_length != 0 {
+                Err(RLPError::ListLengthMismatch {
+                    expected: 0,
+                    got: header.payload_length,
+                })
+            } else {
+                Ok(Self::Nothing)
+            }
         } else {
             Ok(Self::Just(T::decode(buf)?))
         }
@@ -359,7 +372,7 @@ impl<T: Encodable + Decodable> Decodable for AsVec<T> {
 }
 
 /// Serialization wrapper for `Option` to serialize `None` as nothing (do not modify
-/// output stream).
+/// output stream). This must be a last field in struct.
 ///
 /// <div class="warning">
 ///  Do not use it directly: it is only intended for use with `rlp_encodable!` macro.
@@ -380,7 +393,7 @@ impl<T: Encodable + Decodable> Encodable for Maybe<T> {
     }
 }
 impl<T: Encodable + Decodable> Decodable for Maybe<T> {
-    fn decode(buf: &mut &[u8]) -> Result<Self, open_fastrlp::DecodeError> {
+    fn decode(buf: &mut &[u8]) -> RLPResult<Self> {
         if buf.remaining() == 0 {
             Ok(Self::Nothing)
         } else {
@@ -416,11 +429,9 @@ pub(crate) fn lstrip<S: AsRef<[u8]>>(bytes: S) -> Vec<u8> {
 }
 
 #[inline]
-pub(crate) fn static_left_pad<const N: usize>(
-    data: &[u8],
-) -> Result<[u8; N], open_fastrlp::DecodeError> {
+pub(crate) fn static_left_pad<const N: usize>(data: &[u8]) -> RLPResult<[u8; N]> {
     if data.len() > N {
-        return Err(open_fastrlp::DecodeError::Overflow);
+        return Err(RLPError::Overflow);
     }
 
     let mut v = [0; N];
@@ -430,7 +441,7 @@ pub(crate) fn static_left_pad<const N: usize>(
     }
 
     if data[0] == 0 {
-        return Err(open_fastrlp::DecodeError::LeadingZero);
+        return Err(RLPError::LeadingZero);
     }
 
     // SAFETY: length checked above

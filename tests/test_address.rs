@@ -1,4 +1,4 @@
-use open_fastrlp::Encodable;
+use thor_devkit::rlp::Encodable;
 use thor_devkit::{Address, AddressConvertible, PublicKey};
 
 #[test]
