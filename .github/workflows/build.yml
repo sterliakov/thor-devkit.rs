@@ -30,10 +30,11 @@ jobs:
       - name: Stable with rustfmt and clippy
         uses: dtolnay/rust-toolchain@master
         with:
-          components: rustfmt, clippy
           toolchain: ${{matrix.rust}}
       - name: Release build
         run: cargo build --release --all-features
+      - name: Quick test
+        run: cargo test --all-features
 
   test:
     name: Test
@@ -45,10 +46,11 @@ jobs:
           persist-credentials: false
 
       - uses: actions/setup-python@v5
-      - name: Install stable toolchain
-        uses: dtolnay/rust-toolchain@stable
+      - name: Install nightly toolchain
+        uses: dtolnay/rust-toolchain@nightly
         with:
-          toolchain: stable
+          toolchain: nightly
+          components: rustfmt, clippy
 
       - uses: pre-commit/action@v3.0.1
         env:
@@ -62,7 +64,7 @@ jobs:
         run: cargo rdme --check
 
       - name: Run tests with coverage
-        run: RUST_BACKTRACE=1 cargo tarpaulin --out Xml --all-features
+        run: RUST_BACKTRACE=1 cargo +nightly tarpaulin --out Xml --all-features --doc --tests
 
       - name: Submit several transactions to chain
         run: |

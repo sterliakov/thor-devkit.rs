@@ -1,10 +1,10 @@
 [dependencies]
 bip32 = {version = "0.5", default-features = false, features = ["alloc", "secp256k1-ffi"]}
 blake2 = "0.10"
-bytes = "1.5"
+bytes = "1.10"
 ethereum-types = "0.14"
+fastrlp = {version = "0.3.1", features = ["ethereum-types", "std"]}
 itertools = "0.14"
-open-fastrlp = {version = "0.1", features = ["std", "ethereum-types"]}
 rand = {version = "^0.9", features = ["std", "std_rng"], optional = true}
 reqwest = {version = "0.12", features = ["json"], optional = true}
 rustc-hex = "2.1"
@@ -19,7 +19,7 @@ tiny-keccak = {version = "2.0", features = ["keccak"]}
 bloomfilter = "^3.0"
 ethabi = "^18.0"
 rand = "0.9.0"
-tokio = {version = "=1.38.1", features = ["full"]}
+tokio = {version = "1.38", features = ["full"]}
 # version_sync: to ensure versions in `Cargo.toml` and `README.md` are in sync
 version-sync = "0.9.4"
 

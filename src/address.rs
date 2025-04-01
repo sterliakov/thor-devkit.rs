@@ -35,7 +35,7 @@ impl Deref for Address {
     }
 }
 impl Encodable for Address {
-    fn encode(&self, out: &mut dyn open_fastrlp::BufMut) {
+    fn encode(&self, out: &mut dyn bytes::BufMut) {
         self.0.encode(out)
     }
 }
