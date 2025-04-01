@@ -1,29 +1,16 @@
 name: build
 on:
   push:
-    branches:
-      - master
+    branches: [master]
   pull_request:
-    branches:
-      - master
+    branches: [master]
   schedule:
-    - cron: "0 0 * * *"
+    - cron: 0 0 * * 1
+
+permissions:
+  contents: read
 
 jobs:
-  clippy:
-    name: Clippy
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Stable with rustfmt and clippy
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          components: rustfmt, clippy
-      - uses: giraffate/clippy-action@v1
-        with:
-          reporter: 'github-pr-review'
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-
   build:
     name: Build with rust ${{matrix.rust}} on ${{matrix.os == 'ubuntu' && 'Linux' || matrix.os == 'macos' && 'macOS' || matrix.os == 'windows' && 'Windows' || '???'}}
     runs-on: ${{matrix.os}}-latest
@@ -31,13 +18,15 @@ jobs:
       fail-fast: false
       matrix:
         rust:
-          - "1.69.0"  # MSRV
-          - "stable"
-          - "beta"
-          - "nightly"
+          - 1.81.0         # MSRV
+          - stable
+          - beta
+          - nightly
         os: [ubuntu, windows, macos]
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - name: Stable with rustfmt and clippy
         uses: dtolnay/rust-toolchain@master
         with:
@@ -52,15 +41,20 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v3
-      - uses: pre-commit/action@v3.0.0
+        with:
+          persist-credentials: false
 
+      - uses: actions/setup-python@v5
       - name: Install stable toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable
 
-      - uses: taiki-e/install-action@v2
+      - uses: pre-commit/action@v3.0.1
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: taiki-e/install-action@v2      # zizmor: ignore[ref-confusion]
         with:
           tool: cargo-tarpaulin,cargo-rdme
 
@@ -79,7 +73,7 @@ jobs:
           TEST_MNEMONIC: ${{ secrets.MNEMONIC }}
 
       - name: Upload coverage reports to Codecov
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v5
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
       - name: Archive code coverage results

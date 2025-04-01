@@ -14,7 +14,7 @@ use bloomfilter::Bloom;
 
 fn bloom_filter_example() {
     // Create a filter with <0.01% probability of false positive for 10_000 elements
-    let mut filter = Bloom::new_for_fp_rate(10_000, 1e-4);
+    let mut filter = Bloom::new_for_fp_rate(10_000, 1e-4).expect("Filter creation failed");
     println!("Adding items...");
     for i in 1..=100u64 {
         filter.set(&i);

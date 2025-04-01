@@ -1,4 +1,4 @@
-#![doc(html_root_url = "https://docs.rs/thor-devkit/0.1.0-beta.4")]
+#![doc(html_root_url = "https://docs.rs/thor-devkit/0.1.0")]
 #![warn(rust_2018_idioms, missing_docs)]
 #![deny(dead_code, unused_imports, unused_mut)]
 
@@ -71,7 +71,7 @@
 //! releases as soon as the first non-beta release goes live. The required version
 //! will never be newer than 6 months.
 //!
-//! Currently it requires rust `1.69.0` or higher to build.
+//! Currently it requires rust `1.81.0` or higher to build.
 //!
 //! ## Contributing
 //!
@@ -80,7 +80,7 @@
 //!
 //! Check out the [Contributing][] section in the docs for more info.
 //!
-//! [Contributing]: CONTRIBUTING.md
+//! [Contributing]: https://github.com/sterliakov/thor-devkit.rs/blob/master/CONTRIBUTING.md
 //! [open an issue]: https://github.com/sterliakov/thor-devkit.rs/issues
 //!
 //! ## License

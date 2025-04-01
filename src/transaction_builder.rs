@@ -124,8 +124,8 @@ impl TransactionBuilder {
             gas: self.template.gas.unwrap_or(0),
             depends_on: self.template.depends_on,
             nonce: self.template.nonce.unwrap_or_else(|| {
-                let mut rng = rand::thread_rng();
-                rng.gen::<u64>()
+                let mut rng = rand::rng();
+                rng.random::<u64>()
             }),
             reserved: if self.template.delegated {
                 Some(Reserved::new_delegated())

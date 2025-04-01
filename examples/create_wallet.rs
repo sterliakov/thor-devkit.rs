@@ -1,5 +1,4 @@
 use itertools::Itertools;
-use rand::rngs::OsRng;
 use rand::RngCore;
 use secp256k1::Secp256k1;
 use thor_devkit::hdnode::{HDNode, Language, Mnemonic};
@@ -7,7 +6,7 @@ use thor_devkit::AddressConvertible;
 
 fn create_wallet() {
     let mut entropy = [0u8; 32];
-    OsRng.fill_bytes(&mut entropy);
+    rand::rng().fill_bytes(&mut entropy);
     let mnemonic =
         Mnemonic::from_entropy(&entropy, Language::English).expect("Should be constructible");
     println!("Mnemonic text: {}", mnemonic.clone().into_phrase());
