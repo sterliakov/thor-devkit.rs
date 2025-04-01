@@ -521,3 +521,23 @@ fn test_intrinsic_gas_2() {
     let mut buf = vec![];
     tx.encode(&mut buf); // Must not fail
 }
+
+#[test]
+fn test_roundtrip_unsigned() {
+    // Has dependsOn set
+    let orig = decode_hex("f85d4a880106f4db1482fd5a81b4e1e09477845a52acad7fe6a346f5b09e5e89e7caec8e3b890391c64cd2bc206c008080828ca0a0a7567ddfbbf4c8ace8a5aa23a4b852b98dd7ed1d4ff86df35e929a15f1c2541c88a63565b632b9b7c3c0");
+    let parsed = Transaction::decode(&mut &orig[..]).expect("Must parse");
+    let mut buf = vec![];
+    parsed.encode(&mut buf);
+    assert_eq!(buf, orig);
+}
+
+#[test]
+fn test_roundtrip_unsigned_no_depends_on() {
+    // Has dependsOn set to null
+    let orig = decode_hex("f83d4a880106f4db1482fd5a81b4e1e09477845a52acad7fe6a346f5b09e5e89e7caec8e3b890391c64cd2bc206c008080828ca08088a63565b632b9b7c3c0");
+    let parsed = Transaction::decode(&mut &orig[..]).expect("Must parse");
+    let mut buf = vec![];
+    parsed.encode(&mut buf);
+    assert_eq!(buf, orig);
+}
