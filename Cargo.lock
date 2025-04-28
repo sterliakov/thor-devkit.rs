@@ -1897,7 +1897,7 @@ dependencies = [
 
 [[package]]
 name = "thor-devkit"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "bip32",
  "blake2",

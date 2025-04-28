@@ -476,11 +476,11 @@ impl ThorNode {
     /// Chain tag for mainnet
     pub const MAINNET_CHAIN_TAG: u8 = 0x4A;
     /// REST API URL for mainnet (one possible)
-    pub const MAINNET_BASE_URL: &'static str = "https://mainnet.vecha.in/";
+    pub const MAINNET_BASE_URL: &'static str = "https://mainnet.vechain.org/";
     /// Chain tag for testnet
     pub const TESTNET_CHAIN_TAG: u8 = 0x27;
     /// REST API URL for testnet (one possible)
-    pub const TESTNET_BASE_URL: &'static str = "https://testnet.vecha.in/";
+    pub const TESTNET_BASE_URL: &'static str = "https://testnet.vechain.org/";
 
     pub fn mainnet() -> Self {
         //! Mainnet parameters
