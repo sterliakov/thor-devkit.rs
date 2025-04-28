@@ -72,7 +72,7 @@
 //! releases as soon as the first non-beta release goes live. The required version
 //! will never be newer than 6 months.
 //!
-//! Currently it requires rust `1.81.0` or higher to build.
+//! Currently it requires rust `1.82.0` or higher to build.
 //!
 //! ## Contributing
 //!
@@ -86,9 +86,9 @@
 //!
 //! ## License
 //!
-//! This project is proudly licensed under the Lesser GNU General Public License v3 ([LICENSE](https://github.com/sterliakov/thor-devkit.rs/blob/master/LICENSE)).
+//! This project is proudly licensed under the MIT License ([LICENSE](https://github.com/sterliakov/thor-devkit.rs/blob/master/LICENSE)).
 //!
-//! `thor-devkit` can be distributed according to the Lesser GNU General Public License v3. Contributions
+//! `thor-devkit` can be distributed according to the MIT License. Contributions
 //! will be accepted under the same license.
 
 mod address;
