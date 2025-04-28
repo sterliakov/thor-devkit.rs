@@ -442,12 +442,12 @@ pub struct EthCallRequest {
 impl EthCallRequest {
     pub fn from_clause(clause: Clause) -> Self {
         //! Shortcut for a single clause request.
-        return Self {
+        Self {
             clauses: vec![clause],
             gas: None,
             gas_price: None,
             caller: None,
-        };
+        }
     }
 }
 

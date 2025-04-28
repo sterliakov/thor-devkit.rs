@@ -16,8 +16,8 @@ tiny-bip39 = "2.0"
 tiny-keccak = {version = "2.0", features = ["keccak"]}
 
 [dev-dependencies]
+alloy = {version = "0.13.0", default-features = false, features = ["json-abi", "dyn-abi"]}
 bloomfilter = "^3.0"
-ethabi = "^18.0"
 rand = "0.9.0"
 tokio = {version = "1.44", features = ["full"]}
 # version_sync: to ensure versions in `Cargo.toml` and `README.md` are in sync
@@ -25,8 +25,8 @@ version-sync = "0.9.4"
 
 [features]
 builder = ["http", "dep:rand"]
+# default = ['builder', 'serde']
 http = ["dep:reqwest", "serde"]
-# default = ['builder']
 serde = ["dep:serde", "dep:serde_json", "dep:serde_with"]
 
 [lints.rust]
