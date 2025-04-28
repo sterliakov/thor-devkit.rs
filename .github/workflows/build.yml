@@ -64,27 +64,6 @@ jobs:
       - name: Check README is up-to-date
         run: cargo rdme --check
 
-  test-onchain:
-    name: Run chain-mosifying examples
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-
-      - name: Install nightly toolchain
-        uses: actions-rust-lang/setup-rust-toolchain@v1
-        with:
-          toolchain: stable
-
-      - name: Submit several transactions to chain
-        run: |
-          RUST_BACKTRACE=1 cargo run --example transaction_broadcast --all-features
-          RUST_BACKTRACE=1 cargo run --example contract_interaction --all-features
-        env:
-          TEST_TO_ADDRESS: ${{ secrets.TO_ADDRESS }}
-          TEST_MNEMONIC: ${{ secrets.MNEMONIC }}
-
   coverage:
     name: Coverage
     runs-on: ubuntu-latest
@@ -115,3 +94,25 @@ jobs:
         with:
           name: code-coverage-report
           path: cobertura.xml
+
+  test-onchain:
+    name: Run chain-mosifying examples
+    runs-on: ubuntu-latest
+    needs: [coverage, build, lint]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Install nightly toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: stable
+
+      - name: Submit several transactions to chain
+        run: |
+          RUST_BACKTRACE=1 cargo run --example transaction_broadcast --all-features
+          RUST_BACKTRACE=1 cargo run --example contract_interaction --all-features
+        env:
+          TEST_TO_ADDRESS: ${{ secrets.TO_ADDRESS }}
+          TEST_MNEMONIC: ${{ secrets.MNEMONIC }}
