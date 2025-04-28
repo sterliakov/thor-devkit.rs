@@ -9,6 +9,9 @@ Possible header types:
 - `Bug Fixes` for any bug fixes.
 - `Breaking Changes` for any backwards-incompatible changes.
 
+## v0.1.1 (unreleased)
+* feat: updated mainnet and testnet URLs.
+
 ## v0.1.0
 - Breaking: bumped MSRV to 1.78.0
 - Breaking: upgraded most of direct dependencies
