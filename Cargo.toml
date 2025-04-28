@@ -1,13 +1,12 @@
 [dependencies]
+alloy = {version = "0.15.6", default-features = false, features = ["rlp", "std"]}
 bip32 = {version = "0.5", default-features = false, features = ["alloc", "secp256k1-ffi"]}
 blake2 = "0.10"
 bytes = "1.10"
-ethereum-types = "0.15"
-fastrlp = {version = "0.4.0", features = ["ethereum-types", "std"]}
+const-hex = "1.14.0"
 itertools = "0.14"
 rand = {version = "^0.9", features = ["std", "std_rng"], optional = true}
 reqwest = {version = "0.12", features = ["json"], optional = true}
-rustc-hex = "2.1"
 secp256k1 = {version = "0.27", features = ["recovery"]}
 serde = {version = "^1.0", features = ["derive"], optional = true}
 serde_json = {version = "^1.0", optional = true}
@@ -16,7 +15,7 @@ tiny-bip39 = "2.0"
 tiny-keccak = {version = "2.0", features = ["keccak"]}
 
 [dev-dependencies]
-alloy = {version = "0.13.0", default-features = false, features = ["json-abi", "dyn-abi"]}
+alloy = {version = "0.15.6", default-features = false, features = ["json-abi", "dyn-abi"]}
 bloomfilter = "^3.0"
 rand = "0.9.0"
 tokio = {version = "1.44", features = ["full"]}
@@ -27,7 +26,7 @@ version-sync = "0.9.4"
 builder = ["http", "dep:rand"]
 # default = ['builder', 'serde']
 http = ["dep:reqwest", "serde"]
-serde = ["dep:serde", "dep:serde_json", "dep:serde_with"]
+serde = ["dep:serde", "dep:serde_json", "dep:serde_with", "alloy/serde"]
 
 [lints.rust]
 unexpected_cfgs = {level = "warn", check-cfg = ['cfg(tarpaulin_include)']}
@@ -43,8 +42,8 @@ license = "GPL-3.0"
 name = "thor-devkit"
 readme = "README.md"
 repository = "https://github.com/sterliakov/thor-devkit.rs"
-rust-version = "1.81.0"
-version = "0.1.1"
+rust-version = "1.82.0"
+version = "0.2.0"
 
 [package.metadata.docs.rs]
 all-features = true

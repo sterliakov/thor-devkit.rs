@@ -1,9 +1,9 @@
 use bip32::{ExtendedKey, ExtendedKeyAttrs, Prefix};
-use rustc_hex::FromHex;
 use thor_devkit::hdnode::*;
 
 fn decode_hex(hex: &str) -> Vec<u8> {
-    hex.from_hex().unwrap()
+    use const_hex::FromHex;
+    Vec::<u8>::from_hex(hex).unwrap()
 }
 
 #[test]

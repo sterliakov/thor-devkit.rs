@@ -1,4 +1,4 @@
-#![doc(html_root_url = "https://docs.rs/thor-devkit/0.1.1")]
+#![doc(html_root_url = "https://docs.rs/thor-devkit/0.2.0")]
 #![warn(rust_2018_idioms, missing_docs)]
 #![deny(dead_code, unused_imports, unused_mut)]
 
@@ -19,6 +19,7 @@
 //! ```rust
 //! use thor_devkit::transactions::{Transaction, Clause};
 //! use thor_devkit::hdnode::{Mnemonic, Language, HDNode};
+//! use thor_devkit::U256;
 //!
 //! let transaction = Transaction {
 //!     chain_tag: 1,
@@ -31,7 +32,7 @@
 //!                     .parse()
 //!                     .unwrap(),
 //!             ),
-//!             value: 10000.into(),
+//!             value: U256::from(10000),
 //!             data: b"\x00\x00\x00\x60\x60\x60".to_vec().into(),
 //!         },
 //!     ],
@@ -91,7 +92,7 @@
 //! will be accepted under the same license.
 
 mod address;
-pub use address::{Address, AddressConvertible, PrivateKey, PublicKey};
+pub use address::{Address, AddressConvertible, AddressValidationError, PrivateKey, PublicKey};
 pub mod hdnode;
 #[cfg(feature = "http")]
 pub mod network;
@@ -100,6 +101,5 @@ pub mod rlp;
 mod transaction_builder;
 pub mod transactions;
 mod utils;
-pub use ethereum_types::U256;
-pub use rustc_hex::FromHexError as AddressValidationError;
+pub use alloy::primitives::U256;
 pub use utils::{blake2_256, keccak};

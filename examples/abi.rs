@@ -38,12 +38,12 @@ fn demo_abi() {
     );
     // To decode, we strip a function signature first:
     let decoded = allowance
-        .abi_decode_input(&encoded[4..], true)
+        .abi_decode_input(&encoded[4..])
         .expect("Should parse");
     assert_eq!(decoded, inputs);
 
     let decoded_out = allowance
-        .abi_decode_output(&[0x01; 32], true)
+        .abi_decode_output(&[0x01; 32])
         .expect("Should parse");
     assert_eq!(
         decoded_out,

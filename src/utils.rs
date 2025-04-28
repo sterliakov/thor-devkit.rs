@@ -26,7 +26,7 @@ pub fn keccak<S: AsRef<[u8]>>(bytes: S) -> [u8; 32] {
 pub(crate) mod unhex {
     use crate::rlp::RLPError;
     use crate::U256;
-    use rustc_hex::{FromHex, ToHex};
+    use const_hex::{FromHex, ToHexExt};
     use serde::de::Error;
     use serde::{Deserialize, Deserializer, Serializer};
     use serde_with::de::DeserializeAs;
@@ -41,15 +41,14 @@ pub(crate) mod unhex {
 
     impl<T: AsRef<[u8]>> SerializeAs<T> for Hex<Lowercase> {
         fn serialize_as<S: Serializer>(source: &T, serializer: S) -> Result<S::Ok, S::Error> {
-            serializer.serialize_str(&("0x".to_string() + &source.as_ref().to_hex::<String>()))
+            serializer.serialize_str(&("0x".to_string() + &source.as_ref().encode_hex()))
         }
     }
 
     impl<T: AsRef<[u8]>> SerializeAs<T> for Hex<Uppercase> {
         fn serialize_as<S: Serializer>(source: &T, serializer: S) -> Result<S::Ok, S::Error> {
-            serializer.serialize_str(
-                &("0x".to_string() + &source.as_ref().to_hex::<String>().to_uppercase()),
-            )
+            serializer
+                .serialize_str(&("0x".to_string() + &source.as_ref().encode_hex().to_uppercase()))
         }
     }
 
@@ -61,10 +60,7 @@ pub(crate) mod unhex {
         fn deserialize_as<D: Deserializer<'de>>(deserializer: D) -> Result<T, D::Error> {
             <Cow<'de, str> as Deserialize<'de>>::deserialize(deserializer)
                 .and_then(|s| {
-                    s.strip_prefix("0x")
-                        .unwrap_or(&s)
-                        .from_hex()
-                        .map_err(Error::custom)
+                    Vec::<u8>::from_hex(s.strip_prefix("0x").unwrap_or(&s)).map_err(Error::custom)
                 })
                 .and_then(|vec: Vec<u8>| {
                     let length = vec.len();
@@ -104,10 +100,10 @@ pub(crate) mod unhex {
     impl_from_be_bytes!(u16);
     impl BeBytesConvertible<32> for U256 {
         fn from_be_bytes(src: [u8; 32]) -> Self {
-            Self::from_big_endian(&src)
+            Self::from_be_bytes(src)
         }
         fn to_be_bytes_(self) -> [u8; 32] {
-            self.to_big_endian()
+            self.to_be_bytes()
         }
     }
 
@@ -128,15 +124,14 @@ pub(crate) mod unhex {
 
     impl<const N: usize, T: Copy + BeBytesConvertible<N>> SerializeAs<T> for HexNum<N, T, Lowercase> {
         fn serialize_as<S: Serializer>(source: &T, serializer: S) -> Result<S::Ok, S::Error> {
-            serializer
-                .serialize_str(&("0x".to_string() + &source.to_be_bytes_().to_hex::<String>()))
+            serializer.serialize_str(&("0x".to_string() + &source.to_be_bytes_().encode_hex()))
         }
     }
 
     impl<const N: usize, T: Copy + BeBytesConvertible<N>> SerializeAs<T> for HexNum<N, T, Uppercase> {
         fn serialize_as<S: Serializer>(source: &T, serializer: S) -> Result<S::Ok, S::Error> {
             serializer.serialize_str(
-                &("0x".to_string() + &source.to_be_bytes_().to_hex::<String>().to_uppercase()),
+                &("0x".to_string() + &source.to_be_bytes_().encode_hex().to_uppercase()),
             )
         }
     }
@@ -156,7 +151,7 @@ pub(crate) mod unhex {
                     } else {
                         "0".to_string() + stripped
                     };
-                    padded.from_hex().map_err(Error::custom)
+                    Vec::<u8>::from_hex(padded).map_err(Error::custom)
                 })
                 .and_then(|vec: Vec<u8>| {
                     let length = vec.len();
@@ -224,7 +219,7 @@ mod test {
                 b: 0,
                 c: 0,
                 d: 0,
-                e: 0.into()
+                e: U256::ZERO
             })
             .expect("Works"),
             json! {{
@@ -251,7 +246,7 @@ mod test {
                 b: 0,
                 c: 0,
                 d: 0,
-                e: 0.into()
+                e: U256::ZERO
             },
         );
     }
@@ -432,7 +427,7 @@ mod test {
             from_str::<Test>(r#"{"a": "0x0101010G"}"#)
                 .expect_err("Must not parse")
                 .to_string(),
-            "Invalid character 'G' at position 7 at line 1 column 19"
+            "invalid character 'G' at position 7 at line 1 column 19"
         );
     }
 }

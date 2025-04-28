@@ -2,7 +2,8 @@
 
 use crate::rlp::{Decodable, Encodable, RLPError};
 use crate::utils::keccak;
-use ethereum_types::Address as WrappedAddress;
+use alloy::primitives::Address as WrappedAddress;
+pub use const_hex::FromHexError as AddressValidationError;
 pub use secp256k1::{PublicKey, SecretKey as PrivateKey};
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -11,16 +12,10 @@ use std::{
     str::FromStr,
 };
 
-#[cfg_attr(feature = "serde", serde_with::serde_as)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "serde", serde(remote = "ethereum_types::H160"))]
-struct _Address(#[cfg_attr(feature = "serde", serde_as(as = "crate::utils::unhex::Hex"))] [u8; 20]);
-
 /// VeChain address.
-#[cfg_attr(feature = "serde", serde_with::serde_as)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct Address(#[cfg_attr(feature = "serde", serde_as(as = "_Address"))] WrappedAddress);
+pub struct Address(WrappedAddress);
 
 impl DerefMut for Address {
     fn deref_mut(&mut self) -> &mut WrappedAddress {
@@ -45,7 +40,7 @@ impl Decodable for Address {
     }
 }
 impl FromStr for Address {
-    type Err = rustc_hex::FromHexError;
+    type Err = AddressValidationError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(Self(WrappedAddress::from_str(s)?))

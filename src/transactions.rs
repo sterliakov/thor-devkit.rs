@@ -77,7 +77,7 @@ impl Transaction {
         //!
         //! `VIP-191 <https://github.com/vechain/VIPs/blob/master/vips/VIP-191.md>`
         let main_hash = self.get_signing_hash();
-        blake2_256(&[&main_hash[..], &delegate_for.to_fixed_bytes()[..]])
+        blake2_256(&[&main_hash[..], &delegate_for[..]])
     }
 
     pub fn sign(self, private_key: &PrivateKey) -> Self {
@@ -210,7 +210,7 @@ impl Transaction {
             None => Ok(None),
             Some(origin) => Ok(Some(blake2_256(&[
                 &self.get_signing_hash()[..],
-                &origin.address().to_fixed_bytes()[..],
+                &origin.address()[..],
             ]))),
         }
     }

@@ -1,4 +1,3 @@
-use rustc_hex::FromHex;
 use secp256k1::Secp256k1;
 use thor_devkit::rlp::{Bytes, Decodable, Encodable, RLPError};
 use thor_devkit::transactions::*;
@@ -6,7 +5,12 @@ use thor_devkit::U256;
 use thor_devkit::{AddressConvertible, PrivateKey};
 
 fn decode_hex(hex: &str) -> Vec<u8> {
-    hex.from_hex().unwrap()
+    use const_hex::FromHex;
+    Vec::<u8>::from_hex(hex).unwrap()
+}
+
+fn decode_u256(hex: &str) -> U256 {
+    U256::try_from_be_slice(&decode_hex(hex)).unwrap()
 }
 
 const PK_STRING: &str = "7582be841ca040aa940fff6c05773129e135623e41acce3e0b8ba520dc1ae26a";
@@ -32,7 +36,7 @@ macro_rules! undelegated_tx {
                             .parse()
                             .unwrap(),
                     ),
-                    value: 10000.into(),
+                    value: U256::from(10000),
                     data: b"\x00\x00\x00\x60\x60\x60".to_vec().into(),
                 },
                 Clause {
@@ -41,7 +45,7 @@ macro_rules! undelegated_tx {
                             .parse()
                             .unwrap(),
                     ),
-                    value: 20000.into(),
+                    value: U256::from(20000),
                     data: b"\x00\x00\x00\x60\x60\x60".to_vec().into(),
                 },
             ],
@@ -92,7 +96,7 @@ fn test_rlp_encode_basic_contract() {
     let tx = Transaction {
         clauses: vec![Clause {
             to: None,
-            value: 0.into(),
+            value: U256::ZERO,
             data: b"\x12\x34".to_vec().into(),
         }],
         ..undelegated_tx!()
@@ -177,9 +181,9 @@ fn test_rlp_encode_reserved_can_be_omitted() {
 fn test_rlp_encode_depends_on() {
     // Verified on-chain after signing.
     let tx = Transaction {
-        depends_on: Some(U256::from_big_endian(&decode_hex(
+        depends_on: Some(decode_u256(
             "360341090d2c4a01fa7da816c57d51c0b2fa3fcf1f99141806efc99f568c0b2a",
-        ))),
+        )),
         ..undelegated_tx!()
     };
     let mut buf = vec![];
@@ -401,7 +405,7 @@ fn test_rlp_decode_address_shorter() {
                     .parse()
                     .unwrap(),
             ),
-            value: 0.into(),
+            value: U256::ZERO,
             data: Bytes::new(),
         }],
         ..undelegated_tx!()
@@ -413,7 +417,7 @@ fn test_rlp_decode_address_shorter() {
                     .parse()
                     .unwrap(),
             ),
-            value: 0.into(),
+            value: U256::ZERO,
             data: Bytes::new(),
         }],
         ..undelegated_tx!()
@@ -512,7 +516,7 @@ fn test_intrinsic_gas_2() {
     let tx = Transaction {
         clauses: vec![Clause {
             to: None,
-            value: 0.into(),
+            value: U256::ZERO,
             data: Bytes::new(),
         }],
         ..undelegated_tx!()

@@ -5,7 +5,7 @@ use std::{thread, time::Duration};
 use thor_devkit::hdnode::{HDNode, Language, Mnemonic};
 use thor_devkit::network::{AResult, ThorNode};
 use thor_devkit::transactions::Transaction;
-use thor_devkit::Address;
+use thor_devkit::{Address, U256};
 
 async fn create_and_broadcast_transaction() -> AResult<()> {
     let node = ThorNode::testnet();
@@ -54,8 +54,8 @@ async fn create_and_broadcast_transaction() -> AResult<()> {
     let sender_after = node.fetch_account(sender).await?.balance;
     let recipient_after = node.fetch_account(recipient).await?.balance;
     println!("Balances after: {:?}, {:?}", sender_after, recipient_after);
-    assert_eq!(sender_before - sender_after, amount.into());
-    assert_eq!(recipient_after - recipient_before, amount.into());
+    assert_eq!(sender_before - sender_after, U256::from(amount));
+    assert_eq!(recipient_after - recipient_before, U256::from(amount));
     Ok(())
 }
 

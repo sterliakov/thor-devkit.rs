@@ -297,7 +297,7 @@ pub struct BlockInfo {
 impl BlockInfo {
     pub const fn block_ref(&self) -> u64 {
         //! Extract blockRef for transaction.
-        self.id.0[3]
+        self.id.as_limbs()[3]
     }
 }
 
@@ -688,7 +688,7 @@ impl ThorNode {
         //! Retrieve account storage at key.
         //!
         //! Returns [`None`] for non-contract accounts or for missing storage keys.
-        if key == 0.into() {
+        if key.is_zero() {
             return Err(Box::new(ValidationError::ZeroStorageKey));
         }
         let client = Client::new();

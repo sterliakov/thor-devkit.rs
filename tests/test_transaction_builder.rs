@@ -24,7 +24,7 @@ mod test_builder {
                 expiration: 128,
                 clauses: vec![Clause {
                     to: Some(addr),
-                    value: 1000.into(),
+                    value: U256::from(1000),
                     data: Bytes::new()
                 }],
                 gas_price_coef: 0,
@@ -41,8 +41,8 @@ mod test_builder {
     async fn test_multiple_clauses() {
         let addr = Address::from([0; 20]);
         let mut tx = TransactionBuilder::new(ThorNode::testnet())
-            .add_transfer(addr, 1000)
-            .add_transfer(addr, 5000)
+            .add_transfer(addr, 1000u64)
+            .add_transfer(addr, 5000u64)
             .build()
             .await
             .expect("Must build");
@@ -57,12 +57,12 @@ mod test_builder {
                 clauses: vec![
                     Clause {
                         to: Some(addr),
-                        value: 1000.into(),
+                        value: U256::from(1000),
                         data: Bytes::new()
                     },
                     Clause {
                         to: Some(addr),
-                        value: 5000.into(),
+                        value: U256::from(5000),
                         data: Bytes::new()
                     },
                 ],
@@ -82,7 +82,7 @@ mod test_builder {
         let tx = TransactionBuilder::new(ThorNode::testnet())
             .delegated()
             .nonce(1234)
-            .depends_on(0x1234.into())
+            .depends_on(U256::from(0x1234))
             .gas(56_000)
             .gas_price_coef(128)
             .expiration(32)
@@ -99,12 +99,12 @@ mod test_builder {
                 expiration: 32,
                 clauses: vec![Clause {
                     to: Some(addr),
-                    value: 1000.into(),
+                    value: U256::from(1000),
                     data: Bytes::new()
                 }],
                 gas_price_coef: 128,
                 gas: 56_000,
-                depends_on: Some(0x1234.into()),
+                depends_on: Some(U256::from(0x1234)),
                 nonce: 1234,
                 reserved: Some(Reserved::new_delegated()),
                 signature: None,
@@ -155,7 +155,7 @@ mod test_builder {
                 expiration: 128,
                 clauses: vec![Clause {
                     to: None,
-                    value: U256::zero(),
+                    value: U256::ZERO,
                     data: vec![0x12].into(),
                 }],
                 gas_price_coef: 0,
@@ -187,7 +187,7 @@ mod test_builder {
                 expiration: 128,
                 clauses: vec![Clause {
                     to: Some(addr),
-                    value: U256::zero(),
+                    value: U256::ZERO,
                     data: vec![0x12].into(),
                 }],
                 gas_price_coef: 0,
