@@ -32,7 +32,8 @@ jobs:
         with:
           toolchain: ${{matrix.rust}}
       - name: Quick test
-        run: cargo test --all-features
+        # The node doesn't seem to enjoy us sending a lot of requests concurrently.
+        run: cargo test --all-features -- --test-threads=1
 
   test:
     name: Test
