@@ -141,7 +141,7 @@ impl From<bip32::Error> for HDNodeError {
             bip32::Error::Crypto => HDNodeError::Crypto,
             bip32::Error::Decode => HDNodeError::Parse,
             bip32::Error::ChildNumber => HDNodeError::WrongChildNumber,
-            err => HDNodeError::Custom(format!("{:?}", err)),
+            err => HDNodeError::Custom(format!("{err:?}")),
         }
     }
 }
