@@ -107,9 +107,7 @@ pub(crate) mod unhex {
             Self::from_big_endian(&src)
         }
         fn to_be_bytes_(self) -> [u8; 32] {
-            let mut buf = [0; 32];
-            self.to_big_endian(&mut buf);
-            buf
+            self.to_big_endian()
         }
     }
 
