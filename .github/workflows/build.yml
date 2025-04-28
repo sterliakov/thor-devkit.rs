@@ -96,7 +96,7 @@ jobs:
           path: cobertura.xml
 
   test-onchain:
-    name: Run chain-mosifying examples
+    name: Run chain-modifying examples
     runs-on: ubuntu-latest
     needs: [coverage, build, lint]
     steps:
