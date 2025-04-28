@@ -85,7 +85,7 @@
 //! We need a way to encode numbers (like [`u64`]), custom structs, enums and other
 //! more complex machinery that exists in the surrounding code.
 //!
-//! This library wraps [`fastrlp`](https://docs.rs/fastrlp/0.4.0/fastrlp/)
+//! This library wraps [`alloy-rlp`](https://docs.rs/crate/alloy-rlp/latest/)
 //! crate, so everything mentioned there about [`Encodable`] and [`Decodable`] traits still
 //! applies. You can implement those for any object to make it RLP-serializable.
 //!
@@ -173,8 +173,8 @@
 //! ```
 //!
 
+pub use alloy::rlp::{Decodable, Encodable, Error as RLPError, Header};
 pub use bytes::{Buf, BufMut, Bytes, BytesMut};
-pub use fastrlp::{Decodable, DecodeError as RLPError, Encodable, Header};
 
 /// Convenience alias for a result of fallible RLP decoding.
 pub type RLPResult<T> = Result<T, RLPError>;
@@ -309,7 +309,7 @@ impl<T: Encodable + Decodable> Encodable for AsBytes<T> {
 }
 impl<T: Encodable + Decodable> Decodable for AsBytes<T> {
     fn decode(buf: &mut &[u8]) -> RLPResult<Self> {
-        if buf[0] == fastrlp::EMPTY_STRING_CODE {
+        if buf[0] == alloy::rlp::EMPTY_STRING_CODE {
             Bytes::decode(buf)?;
             Ok(Self::Nothing)
         } else {
@@ -339,7 +339,7 @@ impl<T: Encodable + Decodable> Encodable for AsVec<T> {
     fn encode(&self, out: &mut dyn BufMut) {
         match self {
             Self::Just(value) => value.encode(out),
-            Self::Nothing => fastrlp::Header {
+            Self::Nothing => alloy::rlp::Header {
                 list: true,
                 payload_length: 0,
             }
@@ -349,8 +349,8 @@ impl<T: Encodable + Decodable> Encodable for AsVec<T> {
 }
 impl<T: Encodable + Decodable> Decodable for AsVec<T> {
     fn decode(buf: &mut &[u8]) -> RLPResult<Self> {
-        if buf[0] == fastrlp::EMPTY_LIST_CODE {
-            let header = fastrlp::Header::decode(buf)?;
+        if buf[0] == alloy::rlp::EMPTY_LIST_CODE {
+            let header = alloy::rlp::Header::decode(buf)?;
             debug_assert!(header.list);
             debug_assert!(header.payload_length == 0);
             Ok(Self::Nothing)
@@ -451,12 +451,12 @@ mod tests {
             }
         }
         // Struct header prefix
-        let header = fastrlp::EMPTY_LIST_CODE + 1;
+        let header = alloy::rlp::EMPTY_LIST_CODE + 1;
 
         let empty = Test { foo: None };
         let mut buf = vec![];
         empty.encode(&mut buf);
-        assert_eq!(buf, [header, fastrlp::EMPTY_STRING_CODE]);
+        assert_eq!(buf, [header, alloy::rlp::EMPTY_STRING_CODE]);
         assert_eq!(Test::decode(&mut &buf[..]).unwrap(), empty);
 
         let full = Test { foo: Some(7) };
@@ -465,7 +465,7 @@ mod tests {
         assert_eq!(buf, [header, 7]);
         assert_eq!(Test::decode(&mut &buf[..]).unwrap(), full);
 
-        let buf = [header, fastrlp::EMPTY_LIST_CODE];
+        let buf = [header, alloy::rlp::EMPTY_LIST_CODE];
         assert_eq!(
             Test::decode(&mut &buf[..]).unwrap_err(),
             RLPError::UnexpectedList
@@ -481,12 +481,12 @@ mod tests {
             }
         }
         // Struct header prefix
-        let header = fastrlp::EMPTY_LIST_CODE + 1;
+        let header = alloy::rlp::EMPTY_LIST_CODE + 1;
 
         let empty = Test { foo: None };
         let mut buf = vec![];
         empty.encode(&mut buf);
-        assert_eq!(buf, [header, fastrlp::EMPTY_LIST_CODE]);
+        assert_eq!(buf, [header, alloy::rlp::EMPTY_LIST_CODE]);
         assert_eq!(Test::decode(&mut &buf[..]).unwrap(), empty);
 
         let full = Test { foo: Some(7) };
@@ -495,21 +495,21 @@ mod tests {
         assert_eq!(buf, [header, 7]);
         assert_eq!(Test::decode(&mut &buf[..]).unwrap(), full);
 
-        let buf = [header, fastrlp::EMPTY_LIST_CODE + 1, 0x01];
+        let buf = [header, alloy::rlp::EMPTY_LIST_CODE + 1, 0x01];
         assert_eq!(
             Test::decode(&mut &buf[..]).unwrap_err(),
             RLPError::UnexpectedList
         );
-        let buf = [header, fastrlp::EMPTY_STRING_CODE + 1, 0x01];
+        let buf = [header, alloy::rlp::EMPTY_STRING_CODE + 1, 0x01];
         assert_eq!(
             Test::decode(&mut &buf[..]).unwrap_err(),
             RLPError::NonCanonicalSingleByte
         );
 
         // Quirk: [EMPTY_STRING] parses into the same zero as [0x00]
-        let buf = [fastrlp::EMPTY_STRING_CODE];
+        let buf = [alloy::rlp::EMPTY_STRING_CODE];
         assert_eq!(u8::decode(&mut &buf[..]).unwrap(), 0);
-        let buf = [header, fastrlp::EMPTY_STRING_CODE];
+        let buf = [header, alloy::rlp::EMPTY_STRING_CODE];
         assert_eq!(Test::decode(&mut &buf[..]).unwrap(), Test { foo: Some(0) });
     }
 
@@ -522,18 +522,18 @@ mod tests {
             }
         }
         // Struct header prefix
-        let header = fastrlp::EMPTY_LIST_CODE + 1;
+        let header = alloy::rlp::EMPTY_LIST_CODE + 1;
 
         let empty = Test { foo: None };
         let mut buf = vec![];
         empty.encode(&mut buf);
-        assert_eq!(buf, [header, fastrlp::EMPTY_LIST_CODE]);
+        assert_eq!(buf, [header, alloy::rlp::EMPTY_LIST_CODE]);
         assert_eq!(Test::decode(&mut &buf[..]).unwrap(), empty);
 
         let blank = Test { foo: Some(vec![]) };
         let mut buf = vec![];
         blank.encode(&mut buf);
-        assert_eq!(buf, [header, fastrlp::EMPTY_LIST_CODE]);
+        assert_eq!(buf, [header, alloy::rlp::EMPTY_LIST_CODE]);
         // But it doesn't round-trip - we get None in return.
         // Both None and empty vec map to the same encoded value.
         assert_eq!(Test::decode(&mut &buf[..]).unwrap(), empty);
@@ -543,10 +543,13 @@ mod tests {
         };
         let mut buf = vec![];
         full.encode(&mut buf);
-        assert_eq!(buf, [header + 2, fastrlp::EMPTY_LIST_CODE + 2, 0x01, 0x02]);
+        assert_eq!(
+            buf,
+            [header + 2, alloy::rlp::EMPTY_LIST_CODE + 2, 0x01, 0x02]
+        );
         assert_eq!(Test::decode(&mut &buf[..]).unwrap(), full);
 
-        let buf = [header, fastrlp::EMPTY_STRING_CODE + 1, 0x01];
+        let buf = [header, alloy::rlp::EMPTY_STRING_CODE + 1, 0x01];
         assert_eq!(
             Test::decode(&mut &buf[..]).unwrap_err(),
             RLPError::NonCanonicalSingleByte
@@ -565,13 +568,13 @@ mod tests {
         let empty = Test { foo: None };
         let mut buf = vec![];
         empty.encode(&mut buf);
-        assert_eq!(buf, [fastrlp::EMPTY_LIST_CODE]);
+        assert_eq!(buf, [alloy::rlp::EMPTY_LIST_CODE]);
         assert_eq!(Test::decode(&mut &buf[..]).unwrap(), empty);
 
         let full = Test { foo: Some(7) };
         let mut buf = vec![];
         full.encode(&mut buf);
-        assert_eq!(buf, [fastrlp::EMPTY_LIST_CODE + 1, 7]);
+        assert_eq!(buf, [alloy::rlp::EMPTY_LIST_CODE + 1, 7]);
         assert_eq!(Test::decode(&mut &buf[..]).unwrap(), full);
     }
 }

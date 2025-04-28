@@ -24,6 +24,7 @@ To do so, we need to create a transaction and encode it into broadcastable bytes
 ```rust
 use thor_devkit::transactions::{Transaction, Clause};
 use thor_devkit::hdnode::{Mnemonic, Language, HDNode};
+use thor_devkit::U256;
 
 let transaction = Transaction {
     chain_tag: 1,
@@ -36,7 +37,7 @@ let transaction = Transaction {
                     .parse()
                     .unwrap(),
             ),
-            value: 10000.into(),
+            value: U256::from(10000),
             data: b"\x00\x00\x00\x60\x60\x60".to_vec().into(),
         },
     ],
@@ -76,7 +77,7 @@ bumped unless necessary, and such MSRV bumps will only happen in minor or major
 releases as soon as the first non-beta release goes live. The required version
 will never be newer than 6 months.
 
-Currently it requires rust `1.81.0` or higher to build.
+Currently it requires rust `1.82.0` or higher to build.
 
 ### Contributing
 
@@ -90,9 +91,9 @@ Check out the [Contributing][] section in the docs for more info.
 
 ### License
 
-This project is proudly licensed under the Lesser GNU General Public License v3 ([LICENSE](https://github.com/sterliakov/thor-devkit.rs/blob/master/LICENSE)).
+This project is proudly licensed under the MIT License ([LICENSE](https://github.com/sterliakov/thor-devkit.rs/blob/master/LICENSE)).
 
-`thor-devkit` can be distributed according to the Lesser GNU General Public License v3. Contributions
+`thor-devkit` can be distributed according to the MIT License. Contributions
 will be accepted under the same license.
 
 <!-- cargo-rdme end -->

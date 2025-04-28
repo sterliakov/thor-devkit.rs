@@ -22,6 +22,7 @@ repos:
       - id: fmt
       - id: cargo-check
       - id: clippy
+        args: [--all-features]
 
   - repo: https://github.com/macisamuele/language-formatters-pre-commit-hooks
     rev: v2.14.0

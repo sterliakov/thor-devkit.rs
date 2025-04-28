@@ -9,7 +9,12 @@ Possible header types:
 - `Bug Fixes` for any bug fixes.
 - `Breaking Changes` for any backwards-incompatible changes.
 
-## v0.1.1 (unreleased)
+## v0.2.0 (unreleased)
+* breaking: replaced several dependencies with `alloy` umbrella package. This change
+  improves dependency compatibility and makes interaction of our code with external packages
+  more predictable.
+* breaking: the project is now released under MIT license. Previous versions can
+  still be used under conditions of the previous license.
 * feat: updated mainnet and testnet URLs.
 
 ## v0.1.0

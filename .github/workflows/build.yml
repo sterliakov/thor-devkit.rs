@@ -18,7 +18,7 @@ jobs:
       fail-fast: false
       matrix:
         rust:
-          - 1.81.0         # MSRV
+          - 1.82.0         # MSRV
           - stable
           - beta
           - nightly
@@ -59,10 +59,12 @@ jobs:
 
       - uses: taiki-e/install-action@v2      # zizmor: ignore[ref-confusion]
         with:
-          tool: cargo-rdme
+          tool: cargo-rdme,cargo-deny
 
       - name: Check README is up-to-date
         run: cargo rdme --check
+      - name: Check license compat and advisories
+        run: cargo deny check
 
   coverage:
     name: Coverage

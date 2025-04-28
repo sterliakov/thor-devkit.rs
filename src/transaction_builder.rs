@@ -1,3 +1,4 @@
+use alloy::primitives::ruint::UintTryFrom;
 use rand::Rng;
 
 use crate::address::Address;
@@ -69,11 +70,14 @@ impl TransactionBuilder {
         self.template.block_ref = Some(block_ref);
         self
     }
-    pub fn add_transfer<T: Into<U256>>(self, recipient: Address, value: T) -> Self {
+    pub fn add_transfer<T>(self, recipient: Address, value: T) -> Self
+    where
+        U256: UintTryFrom<T>,
+    {
         //! Add a simple transfer to clauses.
         self.add_clause(Clause {
             to: Some(recipient),
-            value: value.into(),
+            value: U256::from(value),
             data: Bytes::new(),
         })
     }
@@ -81,7 +85,7 @@ impl TransactionBuilder {
         //! Add a contract creation clause.
         self.add_clause(Clause {
             to: None,
-            value: U256::zero(),
+            value: U256::ZERO,
             data: contract_bytes,
         })
     }
@@ -89,7 +93,7 @@ impl TransactionBuilder {
         //! Add a contract method call clause.
         self.add_clause(Clause {
             to: Some(contract_address),
-            value: U256::zero(),
+            value: U256::ZERO,
             data: call_bytes,
         })
     }

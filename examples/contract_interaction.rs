@@ -3,12 +3,14 @@
 //!
 //! This example shows a contract interaction based on VTHO contract.
 
-use ethabi::{Contract, Function, Token};
-use std::{fs::File, ops::Deref, thread, time::Duration};
+use alloy::dyn_abi::{DynSolValue, FunctionExt, JsonAbiExt};
+use alloy::json_abi::{Function, JsonAbi};
+use alloy::primitives::U256;
+use std::{thread, time::Duration};
 use thor_devkit::hdnode::{HDNode, Language, Mnemonic};
 use thor_devkit::network::{AResult, BlockReference, ThorNode};
 use thor_devkit::transactions::{Clause, Transaction};
-use thor_devkit::{Address, U256};
+use thor_devkit::Address;
 
 const CONTRACT_ADDRESS: &str = "0x0000000000000000000000000000456E65726779";
 
@@ -18,12 +20,12 @@ async fn get_balance(
     user: &Address,
 ) -> Result<U256, String> {
     let data = balance_of
-        .encode_input(&[Token::Address(*user.deref())])
+        .abi_encode_input(&[DynSolValue::Address(**user)])
         .expect("Input valid");
     let clause = Clause {
         to: Some(CONTRACT_ADDRESS.parse().unwrap()),
         data: data.into(),
-        value: 0.into(),
+        value: U256::ZERO,
     };
     let result = node
         .eth_call(clause, BlockReference::Best)
@@ -31,21 +33,21 @@ async fn get_balance(
         .map_err(|_| "Failed to perform eth_call")?;
 
     let parsed_output = balance_of
-        .decode_output(&result)
+        .abi_decode_output(&result)
         .map_err(|_| "Failed to decode outputs")?;
     assert!(parsed_output.len() == 1, "Must be single output");
     match parsed_output[0] {
-        Token::Uint(balance) => Ok(balance),
+        DynSolValue::Uint(balance, _) => Ok(balance),
         _ => Err("Unexpected output".to_string()),
     }
 }
 
 async fn create_and_broadcast_transaction() -> AResult<()> {
-    let abi = Contract::load(File::open("data/energy.abi").expect("Must exist"))
-        .expect("Should be loadable");
+    let code = std::fs::read_to_string("data/energy.abi").expect("Must exist");
+    let abi: JsonAbi = serde_json::from_str(&code).expect("Should be loadable");
 
-    let transfer = abi.function("transfer").expect("Exists");
-    let balance_of = abi.function("balanceOf").expect("Exists");
+    let transfer = &abi.function("transfer").expect("Exists")[0];
+    let balance_of = &abi.function("balanceOf").expect("Exists")[0];
 
     let node = ThorNode::testnet();
     let mnemonic = Mnemonic::from_phrase(
@@ -71,7 +73,10 @@ async fn create_and_broadcast_transaction() -> AResult<()> {
     );
 
     let data = transfer
-        .encode_input(&[Token::Address(*recipient.deref()), Token::Uint(U256::one())])
+        .abi_encode_input(&[
+            DynSolValue::Address(*recipient),
+            DynSolValue::Uint(U256::ONE, 256),
+        ])
         .expect("Should be encodable");
     let transaction = Transaction::build(node.clone())
         .gas_price_coef(128)
@@ -103,7 +108,7 @@ async fn create_and_broadcast_transaction() -> AResult<()> {
         .expect("Failed to get balance");
     println!("Balances after: {:?}, {:?}", sender_after, recipient_after);
     assert!(
-        recipient_after == recipient_before + 1,
+        recipient_after == recipient_before + U256::ONE,
         "Transfer unsuccessful"
     );
     Ok(())
