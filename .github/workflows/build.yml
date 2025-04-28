@@ -27,14 +27,15 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      - name: Stable with rustfmt and clippy
-        uses: dtolnay/rust-toolchain@master
+      - name: Setup rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           toolchain: ${{matrix.rust}}
       - name: Release build
         run: cargo build --release --all-features
       - name: Quick test
-        run: cargo test --all-features
+        # The node doesn't seem to enjoy us sending a lot of requests concurrently.
+        run: cargo test --all-features -- --test-threads=1
 
   test:
     name: Test
@@ -47,7 +48,7 @@ jobs:
 
       - uses: actions/setup-python@v5
       - name: Install nightly toolchain
-        uses: dtolnay/rust-toolchain@nightly
+        uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           toolchain: nightly
           components: rustfmt, clippy
@@ -61,15 +62,15 @@ jobs:
           tool: cargo-tarpaulin,cargo-rdme
 
       - name: Check README is up-to-date
-        run: cargo rdme --check
+        run: cargo +nightly rdme --check
 
       - name: Run tests with coverage
         run: RUST_BACKTRACE=1 cargo +nightly tarpaulin --out Xml --all-features --doc --tests
 
       - name: Submit several transactions to chain
         run: |
-          RUST_BACKTRACE=1 cargo run --example transaction_broadcast --all-features
-          RUST_BACKTRACE=1 cargo run --example contract_interaction --all-features
+          RUST_BACKTRACE=1 cargo +nightly run --example transaction_broadcast --all-features
+          RUST_BACKTRACE=1 cargo +nightly run --example contract_interaction --all-features
         env:
           TEST_TO_ADDRESS: ${{ secrets.TO_ADDRESS }}
           TEST_MNEMONIC: ${{ secrets.MNEMONIC }}
