@@ -349,8 +349,8 @@ impl BlockReference {
         match self {
             BlockReference::Best => "best".to_string(),
             BlockReference::Finalized => "finalized".to_string(),
-            BlockReference::Number(num) => format!("0x{:02x}", num),
-            BlockReference::ID(id) => format!("0x{:064x}", id),
+            BlockReference::Number(num) => format!("0x{num:02x}"),
+            BlockReference::ID(id) => format!("0x{id:064x}"),
         }
     }
 }
@@ -513,7 +513,7 @@ impl ThorNode {
         //! from other parts of library. You can get more info from node
         //! with [`ThorNode::fetch_extended_transaction`].
         let client = Client::new();
-        let path = format!("/transactions/0x{:064x}", transaction_id);
+        let path = format!("/transactions/0x{transaction_id:064x}");
         let response = client
             .get(self.base_url.join(&path)?)
             .query(&[("raw", "true")])
@@ -544,7 +544,7 @@ impl ThorNode {
         //! This method returns more data than [`ThorNode::fetch_transaction`],
         //! but is not interoperable with [`Transaction`].
         let client = Client::new();
-        let path = format!("/transactions/0x{:064x}", transaction_id);
+        let path = format!("/transactions/0x{transaction_id:064x}");
         let response = client
             .get(self.base_url.join(&path)?)
             .send()
@@ -567,7 +567,7 @@ impl ThorNode {
         //!
         //! Returns [`None`] for nonexistent or not mined transactions.
         let client = Client::new();
-        let path = format!("/transactions/0x{:064x}/receipt", transaction_id);
+        let path = format!("/transactions/0x{transaction_id:064x}/receipt");
         let response = client
             .get(self.base_url.join(&path)?)
             .send()
