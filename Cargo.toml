@@ -3,7 +3,7 @@ bip32 = {version = "0.5", default-features = false, features = ["alloc", "secp25
 blake2 = "0.10"
 bytes = "1.10"
 ethereum-types = "0.14"
-fastrlp = {version = "0.3.1", features = ["ethereum-types", "std"]}
+fastrlp = {version = "0.4.0", features = ["ethereum-types", "std"]}
 itertools = "0.14"
 rand = {version = "^0.9", features = ["std", "std_rng"], optional = true}
 reqwest = {version = "0.12", features = ["json"], optional = true}
