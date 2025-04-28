@@ -59,7 +59,7 @@ jobs:
 
       - uses: taiki-e/install-action@v2      # zizmor: ignore[ref-confusion]
         with:
-          tool: cargo-tarpaulin,cargo-rdme
+          tool: cargo-rdme
 
       - name: Check README is up-to-date
         run: cargo rdme --check
@@ -98,6 +98,10 @@ jobs:
         uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           toolchain: nightly
+
+      - uses: taiki-e/install-action@v2      # zizmor: ignore[ref-confusion]
+        with:
+          tool: cargo-tarpaulin
 
       - name: Run tests with coverage
         run: RUST_BACKTRACE=1 cargo +nightly tarpaulin --out Xml --all-features --doc --tests
