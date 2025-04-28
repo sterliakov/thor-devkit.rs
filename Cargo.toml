@@ -19,7 +19,7 @@ tiny-keccak = {version = "2.0", features = ["keccak"]}
 bloomfilter = "^3.0"
 ethabi = "^18.0"
 rand = "0.9.0"
-tokio = {version = "1.38", features = ["full"]}
+tokio = {version = "1.44", features = ["full"]}
 # version_sync: to ensure versions in `Cargo.toml` and `README.md` are in sync
 version-sync = "0.9.4"
 
