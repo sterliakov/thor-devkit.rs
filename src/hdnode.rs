@@ -6,6 +6,8 @@
 //! from different sources. You can construct an [`HDNode`] in multiple ways, allowing,
 //! for example, generating a private key from mnemonic or generating a random key.
 
+use std::sync::LazyLock;
+
 use bip32::{
     ChainCode, ChildNumber, DerivationPath, ExtendedKey, ExtendedKeyAttrs, ExtendedPrivateKey,
     ExtendedPublicKey, Prefix,
@@ -15,6 +17,12 @@ use secp256k1::{PublicKey, SecretKey as PrivateKey};
 
 /// Default HD derivation path for VeChain
 pub const VET_EXTERNAL_PATH: &str = "m/44'/818'/0'/0";
+
+static VET_EXTERNAL_PATH_PARSED: LazyLock<DerivationPath> = LazyLock::new(|| {
+    VET_EXTERNAL_PATH
+        .parse()
+        .expect("hardcoded path must be valid")
+});
 
 // TODO: add zeroize?
 
@@ -33,8 +41,9 @@ use HDNodeVariant::{Full, Restricted};
 pub struct HDNode(HDNodeVariant);
 
 impl HDNode {
+    #[must_use]
     pub fn build<'a>() -> HDNodeBuilder<'a> {
-        //! Build an HDNode from various parameters
+        //! Build an [`HDNode`] from various parameters
         HDNodeBuilder::default()
     }
 
@@ -47,6 +56,7 @@ impl HDNode {
         Ok(child)
     }
 
+    #[must_use]
     pub fn public_key(&self) -> ExtendedPublicKey<PublicKey> {
         //! Get underlying extended public key.
         match &self.0 {
@@ -61,6 +71,8 @@ impl HDNode {
             Restricted(_) => Err(HDNodeError::Crypto),
         }
     }
+
+    #[must_use]
     pub fn chain_code(&self) -> ChainCode {
         //! Get underlying chain code.
         match &self.0 {
@@ -68,6 +80,8 @@ impl HDNode {
             Restricted(pubkey) => pubkey.attrs().chain_code,
         }
     }
+
+    #[must_use]
     pub fn parent_fingerprint(&self) -> [u8; 4] {
         //! Get underlying chain code.
         match &self.0 {
@@ -75,6 +89,8 @@ impl HDNode {
             Restricted(pubkey) => pubkey.attrs().parent_fingerprint,
         }
     }
+
+    #[must_use]
     pub fn child_number(&self) -> ChildNumber {
         //! Get underlying chain code.
         match &self.0 {
@@ -82,6 +98,8 @@ impl HDNode {
             Restricted(pubkey) => pubkey.attrs().child_number,
         }
     }
+
+    #[must_use]
     pub fn depth(&self) -> u8 {
         //! Get underlying chain code.
         match &self.0 {
@@ -89,9 +107,11 @@ impl HDNode {
             Restricted(pubkey) => pubkey.attrs().depth,
         }
     }
+
+    #[must_use]
     pub fn address(&self) -> crate::address::Address {
         //! Get the address of current node.
-        use crate::address::AddressConvertible;
+        use crate::address::AddressConvertible as _;
 
         match &self.0 {
             Full(privkey) => privkey.public_key().public_key().address(),
@@ -100,7 +120,7 @@ impl HDNode {
     }
 }
 
-/// Errors related to HDNode construction and operation.
+/// Errors related to [`HDNode`] construction and operation.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum HDNodeError {
     /// Failure of a cryptographic operation.
@@ -136,17 +156,17 @@ impl std::error::Error for HDNodeError {}
 
 #[cfg(not(tarpaulin_include))]
 impl From<bip32::Error> for HDNodeError {
-    fn from(err: bip32::Error) -> HDNodeError {
+    fn from(err: bip32::Error) -> Self {
         match err {
-            bip32::Error::Crypto => HDNodeError::Crypto,
-            bip32::Error::Decode => HDNodeError::Parse,
-            bip32::Error::ChildNumber => HDNodeError::WrongChildNumber,
-            err => HDNodeError::Custom(format!("{err:?}")),
+            bip32::Error::Crypto => Self::Crypto,
+            bip32::Error::Decode => Self::Parse,
+            bip32::Error::ChildNumber => Self::WrongChildNumber,
+            err => Self::Custom(format!("{err:?}")),
         }
     }
 }
 
-/// Builder for HDNode: use this to construct a node from different sources.
+/// Builder for `HDNode`: use this to construct a node from different sources.
 ///
 /// The following sources are supported:
 /// - Binary seed. 64 bytes of raw entropy to use for key generation.
@@ -187,6 +207,7 @@ pub struct HDNodeBuilder<'a> {
 }
 
 impl<'a> HDNodeBuilder<'a> {
+    #[must_use]
     pub fn path(mut self, path: DerivationPath) -> Self {
         //! Set a derivation path to use.
         //!
@@ -194,12 +215,15 @@ impl<'a> HDNodeBuilder<'a> {
         self.path = Some(path);
         self
     }
+
+    #[must_use]
     pub const fn seed(mut self, seed: [u8; 64]) -> Self {
         //! Set a seed to use.
         self.seed = Some(seed);
         self
     }
 
+    #[must_use]
     pub fn mnemonic(mut self, mnemonic: Mnemonic) -> Self {
         //! Set a mnemonic to use. You may optionally provide a password as well.
         //!
@@ -207,6 +231,8 @@ impl<'a> HDNodeBuilder<'a> {
         self.mnemonic = Some(mnemonic);
         self
     }
+
+    #[must_use]
     pub fn mnemonic_with_password(mut self, mnemonic: Mnemonic, password: &'a str) -> Self {
         //! Set a password for the mnemonic to use.
         //!
@@ -216,12 +242,13 @@ impl<'a> HDNodeBuilder<'a> {
         self
     }
 
+    #[must_use]
     pub fn master_private_key_bytes<T: Into<ChainCode>>(
         mut self,
         key: [u8; 33],
         chain_code: T,
     ) -> Self {
-        //! Create an HDNode from private key bytes and chain code.
+        //! Create an [`HDNode`] from private key bytes and chain code.
         self.ext_privkey = Some(ExtendedKey {
             prefix: Prefix::XPRV,
             attrs: ExtendedKeyAttrs {
@@ -234,18 +261,21 @@ impl<'a> HDNodeBuilder<'a> {
         });
         self
     }
+
+    #[must_use]
     pub fn private_key(mut self, ext_key: ExtendedKey) -> Self {
-        //! Create an HDNode from extended private key structure.
+        //! Create an [`HDNode`] from extended private key structure.
         self.ext_privkey = Some(ext_key);
         self
     }
 
+    #[must_use]
     pub fn master_public_key_bytes<T: Into<ChainCode>>(
         mut self,
         key: [u8; 33],
         chain_code: T,
     ) -> Self {
-        //! Create an HDNode from private key bytes and chain code.
+        //! Create an [`HDNode`] from private key bytes and chain code.
         //!
         //! <div class="warning">
         //! Beware that this node cannot be used to derive new private keys.
@@ -262,8 +292,10 @@ impl<'a> HDNodeBuilder<'a> {
         });
         self
     }
+
+    #[must_use]
     pub fn public_key(mut self, ext_key: ExtendedKey) -> Self {
-        //! Create an HDNode from extended public key structure.
+        //! Create an [`HDNode`] from extended public key structure.
         //!
         //! <div class="warning">
         //! Beware that this node cannot be used to derive new private keys.
@@ -273,22 +305,18 @@ impl<'a> HDNodeBuilder<'a> {
     }
 
     pub fn build(self) -> Result<HDNode, HDNodeError> {
-        //! Create an HDNode from given arguments.
+        //! Create an [`HDNode`] from given arguments.
         match (self.seed, self.mnemonic, self.ext_privkey, self.ext_pubkey) {
             (Some(seed), None, None, None) => {
-                let path = self.path.unwrap_or_else(|| {
-                    VET_EXTERNAL_PATH
-                        .parse()
-                        .expect("hardcoded path must be valid")
-                });
+                let path = self
+                    .path
+                    .unwrap_or_else(|| VET_EXTERNAL_PATH_PARSED.clone());
                 Ok(ExtendedPrivateKey::derive_from_path(seed, &path).map(|k| HDNode(Full(k)))?)
             }
             (None, Some(mnemonic), None, None) => {
-                let path = self.path.unwrap_or_else(|| {
-                    VET_EXTERNAL_PATH
-                        .parse()
-                        .expect("hardcoded path must be valid")
-                });
+                let path = self
+                    .path
+                    .unwrap_or_else(|| VET_EXTERNAL_PATH_PARSED.clone());
                 Ok(ExtendedPrivateKey::derive_from_path(
                     bip39::Seed::new(&mnemonic, self.password.unwrap_or("")),
                     &path,
@@ -298,10 +326,10 @@ impl<'a> HDNodeBuilder<'a> {
             (None, None, Some(ext_key), None) => Ok(HDNode(Full(ext_key.try_into()?))),
             (None, None, None, Some(ext_key)) => Ok(HDNode(Restricted(ext_key.try_into()?))),
             (None, None, None, None) => Err(HDNodeError::Unbuildable(
-                "no parameters provided".to_string(),
+                "no parameters provided".to_owned(),
             )),
             _ => Err(HDNodeError::Unbuildable(
-                "incompatible parameters".to_string(),
+                "incompatible parameters".to_owned(),
             )),
         }
     }

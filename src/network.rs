@@ -1,6 +1,8 @@
 //! Module for interacting with node HTTP APIs.
 
-use crate::rlp::{Bytes, Decodable};
+use std::sync::LazyLock;
+
+use crate::rlp::{Bytes, Decodable as _};
 use crate::transactions::Reserved;
 use crate::transactions::{Clause, Transaction};
 use crate::utils::unhex;
@@ -59,7 +61,7 @@ struct RawTxResponse {
 
 /// Extended transaction data
 #[serde_with::serde_as]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct ExtendedTransaction {
     /// Identifier of the transaction
     #[serde_as(as = "unhex::HexNum<32, U256>")]
@@ -96,6 +98,7 @@ pub struct ExtendedTransaction {
 }
 
 impl ExtendedTransaction {
+    #[must_use]
     pub fn as_transaction(self) -> Transaction {
         //! Convert to package-compatible [`Transaction`]
         let Self {
@@ -119,11 +122,7 @@ impl ExtendedTransaction {
             gas,
             depends_on,
             nonce,
-            reserved: if delegator.is_some() {
-                Some(Reserved::new_delegated())
-            } else {
-                None
-            },
+            reserved: delegator.is_some().then(Reserved::new_delegated),
             signature: None,
         }
     }
@@ -154,7 +153,7 @@ pub struct TransactionMeta {
 }
 
 /// Transaction receipt
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct Receipt {
     /// Amount of gas consumed by this transaction
     #[serde(rename = "gasUsed")]
@@ -172,7 +171,7 @@ pub struct Receipt {
     pub outputs: Vec<ReceiptOutput>,
 }
 
-#[derive(Clone, Debug, PartialEq, Deserialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Deserialize)]
 struct ReceiptResponse {
     #[serde(flatten)]
     body: Receipt,
@@ -180,7 +179,7 @@ struct ReceiptResponse {
 }
 
 /// Single output in the transaction receipt
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct ReceiptOutput {
     /// Deployed contract address, if the corresponding clause is a contract deployment clause
     #[serde(rename = "contractAddress")]
@@ -193,7 +192,7 @@ pub struct ReceiptOutput {
 
 /// Transaction receipt metadata
 #[serde_with::serde_as]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct ReceiptMeta {
     /// Block identifier
     #[serde(rename = "blockID")]
@@ -216,7 +215,7 @@ pub struct ReceiptMeta {
 
 /// Emitted contract event
 #[serde_with::serde_as]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct Event {
     /// The address of contract which produces the event
     pub address: Address,
@@ -229,7 +228,7 @@ pub struct Event {
 }
 
 /// Single transfer during the contract call
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct Transfer {
     /// Address that sends tokens
     pub sender: Address,
@@ -241,7 +240,7 @@ pub struct Transfer {
 
 /// A blockchain block.
 #[serde_with::serde_as]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct BlockInfo {
     /// Block number (height)
     pub number: u32,
@@ -295,6 +294,7 @@ pub struct BlockInfo {
 }
 
 impl BlockInfo {
+    #[must_use]
     pub const fn block_ref(&self) -> u64 {
         //! Extract blockRef for transaction.
         self.id.as_limbs()[3]
@@ -304,7 +304,7 @@ impl BlockInfo {
 /// Transaction data included in the block extended details.
 ///
 /// Combines [`ExtendedTransaction`] and [`Receipt`].
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct BlockTransaction {
     /// Transaction details
     #[serde(flatten)]
@@ -347,17 +347,17 @@ pub enum BlockReference {
 impl BlockReference {
     fn as_query_param(&self) -> String {
         match self {
-            BlockReference::Best => "best".to_string(),
-            BlockReference::Finalized => "finalized".to_string(),
-            BlockReference::Number(num) => format!("0x{num:02x}"),
-            BlockReference::ID(id) => format!("0x{id:064x}"),
+            Self::Best => "best".to_owned(),
+            Self::Finalized => "finalized".to_owned(),
+            Self::Number(num) => format!("0x{num:02x}"),
+            Self::ID(id) => format!("0x{id:064x}"),
         }
     }
 }
 
 /// Account details
 #[serde_with::serde_as]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct AccountInfo {
     /// VET balance
     #[serde_as(as = "unhex::HexNum<32, U256>")]
@@ -397,7 +397,7 @@ struct TransactionIdResponse {
 
 /// Transaction execution simulation request
 #[serde_with::serde_as]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct SimulateCallRequest {
     /// Clauses of transaction
     pub clauses: Vec<Clause>,
@@ -426,7 +426,7 @@ pub struct SimulateCallRequest {
 
 /// `eth_call` (pure or view function call without on-chain transaction) request
 #[serde_with::serde_as]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct EthCallRequest {
     /// Clauses of transaction
     pub clauses: Vec<Clause>,
@@ -453,7 +453,7 @@ impl EthCallRequest {
 
 /// Transaction execution simulation request
 #[serde_with::serde_as]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct SimulateCallResponse {
     /// Output data
     #[serde_as(as = "unhex::Hex")]
@@ -472,28 +472,38 @@ pub struct SimulateCallResponse {
     pub vm_error: String,
 }
 
+/// REST API URL for mainnet (one possible) in a parsed format
+pub static MAINNET_BASE_URL_PARSED: LazyLock<Url> =
+    LazyLock::new(|| ThorNode::MAINNET_BASE_URL.parse().unwrap());
+/// REST API URL for testnet (one possible) in a parsed format
+pub static TESTNET_BASE_URL_PARSED: LazyLock<Url> =
+    LazyLock::new(|| ThorNode::TESTNET_BASE_URL.parse().unwrap());
+
 impl ThorNode {
     /// Chain tag for mainnet
     pub const MAINNET_CHAIN_TAG: u8 = 0x4A;
     /// REST API URL for mainnet (one possible)
     pub const MAINNET_BASE_URL: &'static str = "https://mainnet.vechain.org/";
+
     /// Chain tag for testnet
     pub const TESTNET_CHAIN_TAG: u8 = 0x27;
     /// REST API URL for testnet (one possible)
     pub const TESTNET_BASE_URL: &'static str = "https://testnet.vechain.org/";
 
+    #[must_use]
     pub fn mainnet() -> Self {
         //! Mainnet parameters
         Self {
-            base_url: Self::MAINNET_BASE_URL.parse().unwrap(),
+            base_url: MAINNET_BASE_URL_PARSED.clone(),
             chain_tag: Self::MAINNET_CHAIN_TAG,
         }
     }
 
+    #[must_use]
     pub fn testnet() -> Self {
         //! Testnet parameters
         Self {
-            base_url: Self::TESTNET_BASE_URL.parse().unwrap(),
+            base_url: TESTNET_BASE_URL_PARSED.clone(),
             chain_tag: Self::TESTNET_CHAIN_TAG,
         }
     }
@@ -608,7 +618,7 @@ impl ThorNode {
     pub async fn fetch_best_block(&self) -> AResult<(BlockInfo, Vec<U256>)> {
         //! Retrieve a best block from node.
         let info = self.fetch_block(BlockReference::Best).await?;
-        Ok(info.ok_or(ValidationError::Unknown("Best block not found".to_string()))?)
+        Ok(info.ok_or_else(|| ValidationError::Unknown("Best block not found".to_owned()))?)
     }
 
     pub async fn fetch_block_expanded(
@@ -708,7 +718,7 @@ impl ThorNode {
     ) -> AResult<Vec<SimulateCallResponse>> {
         //! Simulate a transaction execution.
         //!
-        //! This is an equivalent of eth_call and can be used to call `pure` and
+        //! This is an equivalent of `eth_call` and can be used to call `pure` and
         //! `view` functions without broadcasting a transaction. See
         //! [`eth_call`] for a better interface
         let client = Client::new();

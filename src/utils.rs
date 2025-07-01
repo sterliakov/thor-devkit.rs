@@ -1,5 +1,5 @@
-use blake2::{digest::consts::U32, Blake2b, Digest};
-use tiny_keccak::{Hasher, Keccak};
+use blake2::{digest::consts::U32, Blake2b, Digest as _};
+use tiny_keccak::{Hasher as _, Keccak};
 
 type Blake2b256 = Blake2b<U32>;
 
@@ -9,7 +9,9 @@ pub fn blake2_256<S: AsRef<[u8]>>(bytes: &[S]) -> [u8; 32] {
     //! Builds a hash iteratively by updating with every element
     //! of the input sequence.
     let mut hasher = Blake2b256::new();
-    bytes.iter().for_each(|b| hasher.update(b));
+    for b in bytes {
+        hasher.update(b);
+    }
     hasher.finalize().into()
 }
 
@@ -23,10 +25,10 @@ pub fn keccak<S: AsRef<[u8]>>(bytes: S) -> [u8; 32] {
 }
 
 #[cfg(feature = "serde")]
-pub(crate) mod unhex {
+pub mod unhex {
     use crate::rlp::RLPError;
     use crate::U256;
-    use const_hex::{FromHex, ToHexExt};
+    use const_hex::{FromHex as _, ToHexExt as _};
     use serde::de::Error;
     use serde::{Deserialize, Deserializer, Serializer};
     use serde_with::de::DeserializeAs;
@@ -41,14 +43,14 @@ pub(crate) mod unhex {
 
     impl<T: AsRef<[u8]>> SerializeAs<T> for Hex<Lowercase> {
         fn serialize_as<S: Serializer>(source: &T, serializer: S) -> Result<S::Ok, S::Error> {
-            serializer.serialize_str(&("0x".to_string() + &source.as_ref().encode_hex()))
+            serializer.serialize_str(&("0x".to_owned() + &source.as_ref().encode_hex()))
         }
     }
 
     impl<T: AsRef<[u8]>> SerializeAs<T> for Hex<Uppercase> {
         fn serialize_as<S: Serializer>(source: &T, serializer: S) -> Result<S::Ok, S::Error> {
             serializer
-                .serialize_str(&("0x".to_string() + &source.as_ref().encode_hex().to_uppercase()))
+                .serialize_str(&("0x".to_owned() + &source.as_ref().encode_hex().to_uppercase()))
         }
     }
 
@@ -58,20 +60,17 @@ pub(crate) mod unhex {
         FORMAT: Format,
     {
         fn deserialize_as<D: Deserializer<'de>>(deserializer: D) -> Result<T, D::Error> {
-            <Cow<'de, str> as Deserialize<'de>>::deserialize(deserializer)
-                .and_then(|s| {
-                    Vec::<u8>::from_hex(s.strip_prefix("0x").unwrap_or(&s)).map_err(Error::custom)
-                })
-                .and_then(|vec: Vec<u8>| {
-                    let length = vec.len();
-                    vec.try_into().map_err(|_e: T::Error| {
-                        Error::custom(format!(
-                            "Can't convert a Byte Vector of length {} to {}",
-                            length,
-                            type_name::<T>(),
-                        ))
-                    })
-                })
+            let s = <Cow<'de, str> as Deserialize<'de>>::deserialize(deserializer)?;
+            let vec =
+                Vec::<u8>::from_hex(s.strip_prefix("0x").unwrap_or(&s)).map_err(Error::custom)?;
+            let length = vec.len();
+            vec.try_into().map_err(|_e: T::Error| {
+                Error::custom(format!(
+                    "Can't convert a Byte Vector of length {} to {}",
+                    length,
+                    type_name::<T>(),
+                ))
+            })
         }
     }
 
@@ -124,14 +123,14 @@ pub(crate) mod unhex {
 
     impl<const N: usize, T: Copy + BeBytesConvertible<N>> SerializeAs<T> for HexNum<N, T, Lowercase> {
         fn serialize_as<S: Serializer>(source: &T, serializer: S) -> Result<S::Ok, S::Error> {
-            serializer.serialize_str(&("0x".to_string() + &source.to_be_bytes_().encode_hex()))
+            serializer.serialize_str(&("0x".to_owned() + &source.to_be_bytes_().encode_hex()))
         }
     }
 
     impl<const N: usize, T: Copy + BeBytesConvertible<N>> SerializeAs<T> for HexNum<N, T, Uppercase> {
         fn serialize_as<S: Serializer>(source: &T, serializer: S) -> Result<S::Ok, S::Error> {
             serializer.serialize_str(
-                &("0x".to_string() + &source.to_be_bytes_().encode_hex().to_uppercase()),
+                &("0x".to_owned() + &source.to_be_bytes_().encode_hex().to_uppercase()),
             )
         }
     }
@@ -143,27 +142,23 @@ pub(crate) mod unhex {
         FORMAT: Format,
     {
         fn deserialize_as<D: Deserializer<'de>>(deserializer: D) -> Result<T, D::Error> {
-            <Cow<'de, str> as Deserialize<'de>>::deserialize(deserializer)
-                .and_then(|s| {
-                    let stripped = s.strip_prefix("0x").unwrap_or(&s);
-                    let padded = if stripped.len() % 2 == 0 {
-                        stripped.to_string()
-                    } else {
-                        "0".to_string() + stripped
-                    };
-                    Vec::<u8>::from_hex(padded).map_err(Error::custom)
-                })
-                .and_then(|vec: Vec<u8>| {
-                    let length = vec.len();
-                    Ok(Type::from_be_bytes(static_left_pad::<N>(&vec).map_err(|_| {
-                        Error::custom(format!(
-                            "Can't convert a Byte Vector of length {} to {}",
-                            length,
-                            type_name::<Type>(),
-                        ))
-                    })?)
-                    .into())
-                })
+            let s = <Cow<'de, str> as Deserialize<'de>>::deserialize(deserializer)?;
+            let stripped = s.strip_prefix("0x").unwrap_or(&s);
+            let padded = if stripped.len() % 2 == 0 {
+                stripped.to_owned()
+            } else {
+                "0".to_owned() + stripped
+            };
+            let vec = Vec::<u8>::from_hex(padded).map_err(Error::custom)?;
+            let length = vec.len();
+            let binary_result = static_left_pad::<N>(&vec).map_err(|_| {
+                Error::custom(format!(
+                    "Can't convert a Byte Vector of length {} to {}",
+                    length,
+                    type_name::<Type>(),
+                ))
+            })?;
+            Ok(Type::from_be_bytes(binary_result).into())
         }
     }
 
