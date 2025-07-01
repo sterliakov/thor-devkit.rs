@@ -182,7 +182,7 @@ fn test_from_private_key() {
     let derived_ext_pk = "xprv9uPDJpEQgRQfDcW7BkF7eTya6RPxXeJCqCJGHuCJ4GiRVLzkTXBAJMu2qaMWPrS7AANYqdq6vcBcBUdJCVVFceUvJFjaPdGZ2y9WACViL4L";
     let derived_pk = derived_ext_pk.parse().unwrap();
     let derived_exp = HDNode::build().private_key(derived_pk).build().unwrap();
-    let derived = node.derive(0 + (1 << 31)).unwrap();
+    let derived = node.derive(1 << 31).unwrap();
     assert_eq!(
         derived
             .private_key()
@@ -213,7 +213,7 @@ fn test_from_public_key_cant_derive_hardened() {
     assert_eq!(node, other_node);
 
     // Cannot derive public->public hardened
-    let derived_failed = node.derive(0 + (1 << 31));
+    let derived_failed = node.derive(1 << 31);
     assert_eq!(derived_failed.unwrap_err(), HDNodeError::WrongChildNumber);
 }
 

@@ -22,10 +22,10 @@ repos:
       - id: fmt
       - id: cargo-check
       - id: clippy
-        args: [--all-features]
+        args: [--all-features, --tests]
 
   - repo: https://github.com/macisamuele/language-formatters-pre-commit-hooks
-    rev: v2.14.0
+    rev: v2.15.0
     hooks:
       - id: pretty-format-yaml
         args: [--autofix, --indent, '2', --offset, '2']
@@ -34,7 +34,7 @@ repos:
         exclude: ^Cargo.lock$
 
   - repo: https://github.com/python-jsonschema/check-jsonschema
-    rev: 0.32.1
+    rev: 0.33.1
     hooks:
       - id: check-github-workflows
 
@@ -46,6 +46,6 @@ repos:
           - github.com/wasilibs/go-shellcheck/cmd/shellcheck@v0.10.0
 
   - repo: https://github.com/woodruffw/zizmor-pre-commit
-    rev: v1.5.2
+    rev: v1.11.0
     hooks:
       - id: zizmor

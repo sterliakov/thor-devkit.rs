@@ -26,7 +26,7 @@ fn test_can_create_from_raw() {
 
 #[test]
 fn test_to_checksum_address() {
-    let addresses = vec![
+    let addresses = [
         "0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed",
         "0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359",
         "0xdbF03B407c01E7cD3CBea99509d93f8DDDC8C6FB",

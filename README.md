@@ -77,7 +77,7 @@ bumped unless necessary, and such MSRV bumps will only happen in minor or major
 releases as soon as the first non-beta release goes live. The required version
 will never be newer than 6 months.
 
-Currently it requires rust `1.82.0` or higher to build.
+Currently it requires rust `1.85.0` or higher to build.
 
 ### Contributing
 
