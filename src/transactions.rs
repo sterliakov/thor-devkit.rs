@@ -1,6 +1,6 @@
 //! VeChain transactions support.
 
-use crate::address::{Address, AddressConvertible, PrivateKey};
+use crate::address::{Address, AddressConvertible as _, PrivateKey};
 #[cfg(feature = "builder")]
 use crate::network::ThorNode;
 use crate::rlp::{
@@ -80,6 +80,8 @@ impl Transaction {
         blake2_256(&[&main_hash[..], &delegate_for[..]])
     }
 
+    #[must_use]
+    #[expect(clippy::missing_panics_doc)]
     pub fn sign(self, private_key: &PrivateKey) -> Self {
         //! Create a copy of transaction with a signature emplaced.
         //!
@@ -114,15 +116,24 @@ impl Transaction {
         }
     }
 
+    #[expect(clippy::missing_panics_doc)]
+    #[must_use]
     pub fn sign_hash(hash: [u8; 32], private_key: &PrivateKey) -> [u8; 65] {
         //! Sign a hash obtained from `Transaction::get_signing_hash`.
         let secp = Secp256k1::signing_only();
+        // Only requires that length of hash is 32. Would be better if there were
+        // `Message::from` for `[u8; 32]` but there isn't,
         let signature =
             secp.sign_ecdsa_recoverable(&Message::from_slice(&hash).unwrap(), private_key);
         let (recovery_id, bytes) = signature.serialize_compact();
+
         bytes
             .into_iter()
-            .chain([recovery_id.to_i32() as u8])
+            .chain(
+                // Recovery ID can only be 1..=3
+                #[expect(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+                [recovery_id.to_i32() as u8],
+            )
             .collect::<Vec<_>>()
             .try_into()
             .unwrap()
@@ -151,13 +162,14 @@ impl Transaction {
                 let hash = self.get_signing_hash();
                 let secp = Secp256k1::verification_only();
 
-                Ok(Some(secp.recover_ecdsa(
+                let origin = secp.recover_ecdsa(
                     &Message::from_slice(&hash)?,
                     &RecoverableSignature::from_compact(
                         &signature[..64],
-                        RecoveryId::from_i32(signature[64] as i32)?,
+                        RecoveryId::from_i32(i32::from(signature[64]))?,
                     )?,
-                )?))
+                )?;
+                Ok(Some(origin))
             }
             _ => Err(secp256k1::Error::IncorrectSignature),
         }
@@ -176,7 +188,7 @@ impl Transaction {
                 let hash = self.get_delegate_signing_hash(
                     &self
                         .origin()?
-                        .expect("Must be set, already checked signature")
+                        .ok_or(secp256k1::Error::InvalidPublicKey)?
                         .address(),
                 );
                 let secp = Secp256k1::verification_only();
@@ -185,7 +197,7 @@ impl Transaction {
                     &Message::from_slice(&hash)?,
                     &RecoverableSignature::from_compact(
                         &signature[65..129],
-                        RecoveryId::from_i32(signature[129] as i32)?,
+                        RecoveryId::from_i32(i32::from(signature[129]))?,
                     )?,
                 )?))
             }
@@ -206,21 +218,20 @@ impl Transaction {
         //! Calculate transaction ID using the signature.
         //!
         //! Returns `Ok(None)` if signature is unset.
-        match self.origin()? {
-            None => Ok(None),
-            Some(origin) => Ok(Some(blake2_256(&[
+        self.origin()?.map_or(Ok(None), |origin| {
+            Ok(Some(blake2_256(&[
                 &self.get_signing_hash()[..],
                 &origin.address()[..],
-            ]))),
-        }
+            ])))
+        })
     }
 
     pub fn has_valid_signature(&self) -> bool {
         //! Check wheter the signature is valid.
-        self._has_valid_signature().unwrap_or(false)
+        self.has_valid_signature_or_fail().unwrap_or(false)
     }
 
-    fn _has_valid_signature(&self) -> Result<bool, secp256k1::Error> {
+    fn has_valid_signature_or_fail(&self) -> Result<bool, secp256k1::Error> {
         //! Check wheter the signature is valid.
         if !self.signature_length_valid() {
             return Ok(false);
@@ -235,7 +246,7 @@ impl Transaction {
                         &Message::from_slice(&hash)?,
                         &RecoverableSignature::from_compact(
                             &signature[..64],
-                            RecoveryId::from_i32(signature[64] as i32)?,
+                            RecoveryId::from_i32(i32::from(signature[64]))?,
                         )?,
                     )
                     .is_ok())
@@ -257,6 +268,7 @@ impl Transaction {
     }
 
     #[cfg(feature = "builder")]
+    #[must_use]
     pub fn build(node: ThorNode) -> TransactionBuilder {
         //! Create a transaction builder.
         TransactionBuilder::new(node)
@@ -333,15 +345,14 @@ impl Encodable for Reserved {
     fn encode(&self, out: &mut dyn BufMut) {
         let mut buf = vec![];
         self.features.to_be_bytes().encode(&mut buf);
-        let mut stripped_buf: Vec<_> = [lstrip(&buf[1..])]
-            .into_iter()
+        let mut stripped_buf: Vec<_> = std::iter::once(lstrip(&buf[1..]))
             .map(Bytes::from)
             .chain(self.unused.clone())
             .rev()
             .skip_while(Bytes::is_empty)
             .collect();
         stripped_buf.reverse();
-        stripped_buf.encode(out)
+        stripped_buf.encode(out);
     }
 }
 
@@ -362,6 +373,7 @@ impl Reserved {
     /// Features bitmask for delegated transaction.
     pub const DELEGATED_BIT: u32 = 1;
 
+    #[must_use]
     pub const fn new_delegated() -> Self {
         //! Create reserved structure kind for VIP-191 delegation.
         Self {
@@ -369,6 +381,7 @@ impl Reserved {
             unused: vec![],
         }
     }
+    #[must_use]
     pub const fn new_empty() -> Self {
         //! Create reserved structure kind for regular transaction.
         Self {
@@ -376,10 +389,12 @@ impl Reserved {
             unused: vec![],
         }
     }
+    #[must_use]
     pub const fn is_delegated(&self) -> bool {
         //! Belongs to delegated transaction?
         self.features & Self::DELEGATED_BIT != 0
     }
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         //! Belongs to non-delegated transaction?
         self.features == 0 && self.unused.is_empty()

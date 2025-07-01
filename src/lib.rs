@@ -1,8 +1,19 @@
 #![doc(html_root_url = "https://docs.rs/thor-devkit/0.2.0")]
-#![warn(rust_2018_idioms, missing_docs)]
-#![deny(dead_code, unused_imports, unused_mut)]
+#![deny(missing_docs)]
+#![deny(clippy::all, clippy::pedantic, clippy::nursery)]
+#![allow(clippy::unreadable_literal)]
+#![allow(clippy::missing_errors_doc)]
+#![allow(clippy::unsafe_derive_deserialize)]
+#![deny(clippy::shadow_unrelated)]
+#![deny(clippy::str_to_string)]
+#![deny(clippy::unused_trait_names)]
+#![deny(clippy::print_stderr)]
+#![deny(clippy::print_stdout)]
+#![deny(clippy::filter_map_bool_then)]
+#![deny(clippy::if_then_some_else_none)]
+#![deny(clippy::return_and_then)]
 
-//! Rust library to aid coding with VeChain: wallets, transactions signing,
+//! Rust library to aid coding with `VeChain`: wallets, transactions signing,
 //! encoding and verification, smart contract ABI interfacing, etc.
 //!
 //! This library acts primary as a proxy to several underlying libraries,

@@ -234,7 +234,7 @@ macro_rules! rlp_encodable {
 
         impl $name {
             fn encode_internal(&self, out: &mut dyn $crate::rlp::BufMut) {
-                use $crate::rlp::Encodable;
+                use $crate::rlp::Encodable as _;
                 $crate::__encode_as!(out, $(self.$field_name $(=> $cast)?),+);
             }
         }
@@ -254,7 +254,7 @@ macro_rules! rlp_encodable {
         impl $crate::rlp::Decodable for $name {
             fn decode(buf: &mut &[u8]) -> $crate::rlp::RLPResult<Self> {
                 #[allow(unused_imports)]
-                use $crate::rlp::Decodable;
+                use $crate::rlp::Decodable as _;
                 $crate::rlp::Header::decode(buf)?;
                 Ok(Self {
                     $($field_name: $crate::__decode_as!(buf, $field_type $(=> $cast)? )),*
@@ -426,6 +426,7 @@ pub(crate) fn static_left_pad<const N: usize>(data: &[u8]) -> RLPResult<[u8; N]>
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::shadow_unrelated)]
     use super::*;
 
     #[test]

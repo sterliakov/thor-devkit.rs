@@ -31,7 +31,7 @@ impl Deref for Address {
 }
 impl Encodable for Address {
     fn encode(&self, out: &mut dyn bytes::BufMut) {
-        self.0.encode(out)
+        self.0.encode(out);
     }
 }
 impl Decodable for Address {
@@ -56,16 +56,18 @@ impl Address {
     /// Size of underlying array in bytes.
     pub const WIDTH: usize = 20;
 
+    #[must_use]
     pub fn to_hex(&self) -> String {
         //! Encode as a hex string with `0x` prefix.
         format!("{:02x?}", self.0)
     }
 
+    #[must_use]
     pub fn to_checksum_address(&self) -> String {
         //! Create a checksum address
 
         let body = self.to_hex();
-        let hash = keccak(&body.clone()[2..42]);
+        let hash = keccak(&body[2..42]);
 
         "0x".chars()
             .chain(
