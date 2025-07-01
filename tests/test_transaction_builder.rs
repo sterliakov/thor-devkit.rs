@@ -119,7 +119,7 @@ mod test_builder {
             .await
             .expect_err("Must fail");
         assert_eq!(
-            format!("{}", err),
+            format!("{err}"),
             "Cannot build an empty transaction - make sure to add at least one clause first."
         )
     }
@@ -132,7 +132,7 @@ mod test_builder {
             .await
             .expect_err("Must fail");
         assert_eq!(
-            format!("{}", err),
+            format!("{err}"),
             "Transaction clauses involve contract interaction, please provide gas amount explicitly."
         )
     }

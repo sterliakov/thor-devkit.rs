@@ -104,7 +104,7 @@ fn test_rlp_encode_basic_contract() {
     let expected = decode_hex("d90184aabbccdd20c6c5808082123481808252088083bc614ec0");
     let mut buf = vec![];
     tx.encode(&mut buf);
-    buf.iter().for_each(|c| print!("{:02x?}", c));
+    buf.iter().for_each(|c| print!("{c:02x?}"));
     assert_eq!(buf, expected);
     assert_eq!(
         Transaction::decode(&mut &buf[..]).expect("Must be decodable"),
