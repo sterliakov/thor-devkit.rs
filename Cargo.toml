@@ -42,7 +42,7 @@ license = "MIT"
 name = "thor-devkit"
 readme = "README.md"
 repository = "https://github.com/sterliakov/thor-devkit.rs"
-rust-version = "1.82.0"
+rust-version = "1.85.0"
 version = "0.2.0"
 
 [package.metadata.docs.rs]
