@@ -345,6 +345,8 @@ impl Encodable for Reserved {
     fn encode(&self, out: &mut dyn BufMut) {
         let mut buf = vec![];
         self.features.to_be_bytes().encode(&mut buf);
+        // Clippy bug
+        #[allow(clippy::collection_is_never_read)]
         let mut stripped_buf: Vec<_> = std::iter::once(lstrip(&buf[1..]))
             .map(Bytes::from)
             .chain(self.unused.clone())
