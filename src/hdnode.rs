@@ -71,6 +71,7 @@ impl HDNode {
             Restricted(_) => Err(HDNodeError::Crypto),
         }
     }
+
     #[must_use]
     pub fn chain_code(&self) -> ChainCode {
         //! Get underlying chain code.
@@ -79,6 +80,7 @@ impl HDNode {
             Restricted(pubkey) => pubkey.attrs().chain_code,
         }
     }
+
     #[must_use]
     pub fn parent_fingerprint(&self) -> [u8; 4] {
         //! Get underlying chain code.
@@ -87,6 +89,7 @@ impl HDNode {
             Restricted(pubkey) => pubkey.attrs().parent_fingerprint,
         }
     }
+
     #[must_use]
     pub fn child_number(&self) -> ChildNumber {
         //! Get underlying chain code.
@@ -95,6 +98,7 @@ impl HDNode {
             Restricted(pubkey) => pubkey.attrs().child_number,
         }
     }
+
     #[must_use]
     pub fn depth(&self) -> u8 {
         //! Get underlying chain code.
@@ -103,6 +107,7 @@ impl HDNode {
             Restricted(pubkey) => pubkey.attrs().depth,
         }
     }
+
     #[must_use]
     pub fn address(&self) -> crate::address::Address {
         //! Get the address of current node.
@@ -210,6 +215,7 @@ impl<'a> HDNodeBuilder<'a> {
         self.path = Some(path);
         self
     }
+
     #[must_use]
     pub const fn seed(mut self, seed: [u8; 64]) -> Self {
         //! Set a seed to use.
@@ -225,6 +231,7 @@ impl<'a> HDNodeBuilder<'a> {
         self.mnemonic = Some(mnemonic);
         self
     }
+
     #[must_use]
     pub fn mnemonic_with_password(mut self, mnemonic: Mnemonic, password: &'a str) -> Self {
         //! Set a password for the mnemonic to use.
@@ -254,6 +261,7 @@ impl<'a> HDNodeBuilder<'a> {
         });
         self
     }
+
     #[must_use]
     pub fn private_key(mut self, ext_key: ExtendedKey) -> Self {
         //! Create an [`HDNode`] from extended private key structure.
@@ -284,6 +292,7 @@ impl<'a> HDNodeBuilder<'a> {
         });
         self
     }
+
     #[must_use]
     pub fn public_key(mut self, ext_key: ExtendedKey) -> Self {
         //! Create an [`HDNode`] from extended public key structure.

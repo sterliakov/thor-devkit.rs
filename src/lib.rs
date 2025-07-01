@@ -12,7 +12,7 @@
 #![deny(clippy::if_then_some_else_none)]
 #![deny(clippy::return_and_then)]
 
-//! Rust library to aid coding with `VeChain`: wallets, transactions signing,
+//! Rust library to aid coding with VeChain: wallets, transactions signing,
 //! encoding and verification, smart contract ABI interfacing, etc.
 //!
 //! This library acts primary as a proxy to several underlying libraries,

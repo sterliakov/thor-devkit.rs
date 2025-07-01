@@ -36,48 +36,56 @@ impl TransactionBuilder {
             template: TransactionTemplate::default(),
         }
     }
+
     #[must_use]
     pub const fn delegated(mut self) -> Self {
         //! Make a transaction delegated.
         self.template.delegated = true;
         self
     }
+
     #[must_use]
     pub const fn nonce(mut self, nonce: u64) -> Self {
         //! Set a nonce for transaction.
         self.template.nonce = Some(nonce);
         self
     }
+
     #[must_use]
     pub const fn depends_on(mut self, depends_on: U256) -> Self {
         //! Mark a transaction as dependent on another one.
         self.template.depends_on = Some(depends_on);
         self
     }
+
     #[must_use]
     pub const fn gas(mut self, gas: u64) -> Self {
         //! Set maximal gas amount for transaction.
         self.template.gas = Some(gas);
         self
     }
+
     #[must_use]
     pub const fn gas_price_coef(mut self, gas_price_coef: u8) -> Self {
         //! Set gas price coefficient for transaction.
         self.template.gas_price_coef = Some(gas_price_coef);
         self
     }
+
     #[must_use]
     pub const fn expiration(mut self, expiration: u32) -> Self {
         //! Set expiration for transaction in blocks, starting from `block_ref`.
         self.template.expiration = Some(expiration);
         self
     }
+
     #[must_use]
     pub const fn block_ref(mut self, block_ref: u64) -> Self {
         //! Set `block_ref` for transaction to count `expiration` from.
         self.template.block_ref = Some(block_ref);
         self
     }
+
     #[must_use]
     pub fn add_transfer<T>(self, recipient: Address, value: T) -> Self
     where
@@ -90,6 +98,7 @@ impl TransactionBuilder {
             data: Bytes::new(),
         })
     }
+
     #[must_use]
     pub fn add_contract_create(self, contract_bytes: Bytes) -> Self {
         //! Add a contract creation clause.
@@ -99,6 +108,7 @@ impl TransactionBuilder {
             data: contract_bytes,
         })
     }
+
     #[must_use]
     pub fn add_contract_call(self, contract_address: Address, call_bytes: Bytes) -> Self {
         //! Add a contract method call clause.
@@ -108,6 +118,7 @@ impl TransactionBuilder {
             data: call_bytes,
         })
     }
+
     #[must_use]
     pub fn add_clause(mut self, clause: Clause) -> Self {
         //! Add an arbitrary, user-provided clause.

@@ -383,6 +383,7 @@ impl Reserved {
             unused: vec![],
         }
     }
+
     #[must_use]
     pub const fn new_empty() -> Self {
         //! Create reserved structure kind for regular transaction.
@@ -391,11 +392,13 @@ impl Reserved {
             unused: vec![],
         }
     }
+
     #[must_use]
     pub const fn is_delegated(&self) -> bool {
         //! Belongs to delegated transaction?
         self.features & Self::DELEGATED_BIT != 0
     }
+
     #[must_use]
     pub fn is_empty(&self) -> bool {
         //! Belongs to non-delegated transaction?
