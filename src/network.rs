@@ -659,7 +659,7 @@ impl ThorNode {
             .text()
             .await?;
         let decoded: TransactionIdResponse = serde_json::from_str(&response)
-            .map_err(|_| ValidationError::BroadcastFailed(response.to_string()))?;
+            .map_err(|_| ValidationError::BroadcastFailed(response.clone()))?;
         Ok(decoded.id)
     }
 
