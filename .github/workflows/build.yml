@@ -1,4 +1,4 @@
-name: build
+name: test
 on:
   push:
     branches: [master]
@@ -18,7 +18,7 @@ jobs:
       fail-fast: false
       matrix:
         rust:
-          - 1.85.0         # MSRV
+          - 1.86.0         # MSRV
           - stable
           - beta
           - nightly
