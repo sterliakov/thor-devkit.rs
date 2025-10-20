@@ -45,7 +45,7 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
 
       - name: Install nightly toolchain
         uses: actions-rust-lang/setup-rust-toolchain@v1
