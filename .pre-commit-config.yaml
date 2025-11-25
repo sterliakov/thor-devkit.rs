@@ -38,13 +38,13 @@ repos:
       - id: check-github-workflows
 
   - repo: https://github.com/rhysd/actionlint
-    rev: v1.7.8
+    rev: v1.7.9
     hooks:
       - id: actionlint
         additional_dependencies:
           - github.com/wasilibs/go-shellcheck/cmd/shellcheck@v0.10.0
 
   - repo: https://github.com/woodruffw/zizmor-pre-commit
-    rev: v1.16.3
+    rev: v1.17.0
     hooks:
       - id: zizmor
