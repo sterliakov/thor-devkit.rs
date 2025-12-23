@@ -13,9 +13,9 @@ dependencies = [
 
 [[package]]
 name = "alloy"
-version = "1.0.42"
+version = "1.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0e84ab07ca0c3210734019e4d0e5392952ed574196ab0f904ab9c7ba0ae15595"
+checksum = "f609fb6392508278b276906d6247ea44f5777e448db95444fa39e89b7aee896a"
 dependencies = [
  "alloy-consensus",
  "alloy-core",
@@ -27,9 +27,9 @@ dependencies = [
 
 [[package]]
 name = "alloy-consensus"
-version = "1.0.42"
+version = "1.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3abecb92ba478a285fbf5689100dbafe4003ded4a09bf4b5ef62cca87cd4f79e"
+checksum = "f3dcd2b4e208ce5477de90ccdcbd4bde2c8fb06af49a443974e92bb8f2c5e93f"
 dependencies = [
  "alloy-eips",
  "alloy-primitives",
@@ -38,6 +38,7 @@ dependencies = [
  "alloy-trie",
  "alloy-tx-macros",
  "auto_impl",
+ "borsh",
  "c-kzg",
  "derive_more",
  "either",
@@ -95,32 +96,34 @@ dependencies = [
 
 [[package]]
 name = "alloy-eip2930"
-version = "0.2.1"
+version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7b82752a889170df67bbb36d42ca63c531eb16274f0d7299ae2a680facba17bd"
+checksum = "9441120fa82df73e8959ae0e4ab8ade03de2aaae61be313fbf5746277847ce25"
 dependencies = [
  "alloy-primitives",
  "alloy-rlp",
+ "borsh",
  "serde",
 ]
 
 [[package]]
 name = "alloy-eip7702"
-version = "0.6.1"
+version = "0.6.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9d4769c6ffddca380b0070d71c8b7f30bed375543fe76bb2f74ec0acf4b7cd16"
+checksum = "2919c5a56a1007492da313e7a3b6d45ef5edc5d33416fdec63c0d7a2702a0d20"
 dependencies = [
  "alloy-primitives",
  "alloy-rlp",
+ "borsh",
  "serde",
  "thiserror 2.0.17",
 ]
 
 [[package]]
 name = "alloy-eips"
-version = "1.0.42"
+version = "1.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "07d9a64522a0db6ebcc4ff9c904e329e77dd737c2c25d30f1bdc32ca6c6ce334"
+checksum = "6847d641141b92a1557094aa6c236cbe49c06fb24144d4a21fe6acb970c15888"
 dependencies = [
  "alloy-eip2124",
  "alloy-eip2930",
@@ -129,6 +132,7 @@ dependencies = [
  "alloy-rlp",
  "alloy-serde",
  "auto_impl",
+ "borsh",
  "c-kzg",
  "derive_more",
  "either",
@@ -140,14 +144,15 @@ dependencies = [
 
 [[package]]
 name = "alloy-genesis"
-version = "1.0.42"
+version = "1.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "675b163946b343ed2ddde4416114ad61fabc8b2a50d08423f38aa0ac2319e800"
+checksum = "fe3192fca2eb0b0c4b122b3c2d8254496b88a4e810558dddd3ea2f30ad9469df"
 dependencies = [
  "alloy-eips",
  "alloy-primitives",
  "alloy-serde",
  "alloy-trie",
+ "borsh",
  "serde",
  "serde_with",
 ]
@@ -215,9 +220,9 @@ dependencies = [
 
 [[package]]
 name = "alloy-serde"
-version = "1.0.42"
+version = "1.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "596cfa360922ba9af901cc7370c68640e4f72adb6df0ab064de32f21fec498d7"
+checksum = "067b718d2e6ac1bb889341fcc7a250cfa49bcd3ba4f23923f1c1eb1f2b10cb7c"
 dependencies = [
  "alloy-primitives",
  "serde",
@@ -315,9 +320,9 @@ dependencies = [
 
 [[package]]
 name = "alloy-tx-macros"
-version = "1.0.42"
+version = "1.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ab54221eccefa254ce9f65b079c097b1796e48c21c7ce358230f8988d75392fb"
+checksum = "04950a13cc4209d8e9b78f306e87782466bad8538c94324702d061ff03e211c9"
 dependencies = [
  "darling",
  "proc-macro2",
@@ -679,6 +684,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "borsh"
+version = "1.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d1da5ab77c1437701eeff7c88d968729e7766172279eab0676857b3d63af7a6f"
+dependencies = [
+ "borsh-derive",
+ "cfg_aliases",
+]
+
+[[package]]
+name = "borsh-derive"
+version = "1.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0686c856aa6aac0c4498f936d7d6a02df690f614c03e4d906d1018062b5c5e2c"
+dependencies = [
+ "once_cell",
+ "proc-macro-crate",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.108",
+]
+
+[[package]]
 name = "bs58"
 version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -744,6 +772,12 @@ name = "cfg-if"
 version = "1.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9330f8b2ff13f34540b44e946ef35111825727b38d33286ef986142615121801"
+
+[[package]]
+name = "cfg_aliases"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "613afe47fcd5fac7ccf1db93babcb082c5994d996f20b8b159f2ad1658eb5724"
 
 [[package]]
 name = "chrono"
@@ -1093,7 +1127,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb"
 dependencies = [
  "libc",
- "windows-sys 0.61.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -2478,7 +2512,7 @@ dependencies = [
  "errno",
  "libc",
  "linux-raw-sys",
- "windows-sys 0.61.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -2995,7 +3029,7 @@ dependencies = [
  "getrandom 0.3.4",
  "once_cell",
  "rustix",
- "windows-sys 0.61.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
